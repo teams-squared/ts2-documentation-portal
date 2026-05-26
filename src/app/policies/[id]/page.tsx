@@ -23,6 +23,21 @@ export default async function PolicyDocPage({
   const doc = await prisma.publicIsoDoc.findUnique({ where: { id } });
   if (!doc) notFound();
 
+  // Fire-and-forget audit row. Admins use this to see which public docs
+  // are actually being read. Not used for ack evidence — that pipeline
+  // stays exclusively on LessonProgress for POLICY_DOC lessons.
+  void prisma.isoLibraryView
+    .create({
+      data: {
+        publicIsoDocId: doc.id,
+        userId: session.user!.id!,
+        sourceVersion: doc.sourceVersion,
+      },
+    })
+    .catch((err) => {
+      console.error("[policies] view log failed:", err);
+    });
+
   // reviewHistory / revisionHistory are stored as JSON; the parser emits
   // the same shape consumed by PolicyDocViewer, so we cast through unknown.
   const reviewHistory = (doc.reviewHistory as unknown as ReviewHistoryEntry[]) ?? [];

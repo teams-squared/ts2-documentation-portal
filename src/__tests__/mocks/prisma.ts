@@ -188,4 +188,10 @@ export const mockPrisma = {
     create: vi.fn().mockResolvedValue({}),
     createMany: vi.fn().mockResolvedValue({ count: 0 }),
   },
+  isoLibraryView: {
+    findMany: vi.fn().mockResolvedValue([]),
+    create: vi.fn().mockResolvedValue({}),
+    groupBy: vi.fn().mockResolvedValue([]),
+    count: vi.fn().mockResolvedValue(0),
+  },
 };

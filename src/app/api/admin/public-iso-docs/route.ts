@@ -40,9 +40,27 @@ export async function GET() {
       publishedAt: true,
       lastSyncedAt: true,
       lastSyncedBy: { select: { name: true, email: true } },
+      _count: { select: { views: true } },
     },
   });
-  return NextResponse.json({ docs: rows });
+
+  // Distinct-viewer count is a second query — Prisma doesn't expose it via
+  // _count in a single round-trip. Cheap enough for a small library.
+  const distinctByDoc = await prisma.isoLibraryView.groupBy({
+    by: ["publicIsoDocId"],
+    _count: { userId: true },
+    where: { publicIsoDocId: { in: rows.map((r) => r.id) } },
+  });
+  const distinctMap = new Map(
+    distinctByDoc.map((g) => [g.publicIsoDocId, g._count.userId]),
+  );
+
+  const docs = rows.map(({ _count, ...rest }) => ({
+    ...rest,
+    viewCount: _count.views,
+    distinctViewers: distinctMap.get(rest.id) ?? 0,
+  }));
+  return NextResponse.json({ docs });
 }
 
 export async function POST(request: Request) {

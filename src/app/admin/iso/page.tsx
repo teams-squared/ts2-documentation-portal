@@ -69,7 +69,8 @@ export default async function AdminIsoPage() {
           <span className="font-medium">/policies</span>, regardless of
           enrollment. Use this for org-wide reference material (ISO policies,
           handbooks, public notices) that doesn&apos;t require an
-          acknowledgement audit trail.
+          acknowledgement audit trail. Library opens are logged for
+          visibility but do not count as ISO acks.
         </p>
         <PublicIsoLibraryManager />
       </IsoTabPanel>

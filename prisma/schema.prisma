@@ -41,6 +41,7 @@ model User {
   publicIsoDocsPublished PublicIsoDoc[]    @relation("PublicIsoDocsPublished")
   manualRemindersReceived ManualReminderLog[] @relation("ManualReminderTarget")
   manualRemindersSent     ManualReminderLog[] @relation("ManualReminderSender")
+  isoLibraryViews     IsoLibraryView[]
 }
 
 enum CourseStatus {
@@ -228,9 +229,27 @@ model PublicIsoDoc {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  views               IsoLibraryView[]
+
   @@unique([sharePointDriveId, sharePointItemId])
   @@index([sortOrder])
   @@index([documentCode])
+}
+
+/// Audit row — one per /policies/[id] open. Best-effort, fire-and-forget
+/// from the viewer route. Not used for ack evidence — see LessonProgress
+/// for that. Gives admins visibility into which public docs get read.
+model IsoLibraryView {
+  id              String       @id @default(cuid())
+  publicIsoDocId  String
+  publicIsoDoc    PublicIsoDoc @relation(fields: [publicIsoDocId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  viewedAt        DateTime     @default(now())
+  sourceVersion   String?
+
+  @@index([publicIsoDocId, viewedAt])
+  @@index([userId, viewedAt])
 }
 
 model Enrollment {

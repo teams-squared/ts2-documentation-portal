@@ -28,10 +28,21 @@ interface PublicIsoDocRow {
   publishedAt: string;
   lastSyncedAt: string;
   lastSyncedBy: { name: string | null; email: string } | null;
+  viewCount: number;
+  distinctViewers: number;
 }
 
 const DOCX_MIME =
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+interface AvailableLesson {
+  policyDocLessonId: string;
+  documentTitle: string;
+  documentCode: string | null;
+  sourceVersion: string;
+  courseTitle: string;
+  lessonTitle: string;
+}
 
 export function PublicIsoLibraryManager() {
   const [rows, setRows] = useState<PublicIsoDocRow[] | null>(null);
@@ -42,6 +53,9 @@ export function PublicIsoLibraryManager() {
   const [shareUrl, setShareUrl] = useState("");
   const [resolving, setResolving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [lessonPickerOpen, setLessonPickerOpen] = useState(false);
+  const [availableLessons, setAvailableLessons] = useState<AvailableLesson[] | null>(null);
+  const [selectedLessonId, setSelectedLessonId] = useState("");
 
   const refresh = useCallback(async () => {
     setError(null);
@@ -92,6 +106,47 @@ export function PublicIsoLibraryManager() {
     },
     [addByPointer],
   );
+
+  const openLessonPicker = useCallback(async () => {
+    setLessonPickerOpen(true);
+    setAvailableLessons(null);
+    setSelectedLessonId("");
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/public-iso-docs/from-lesson");
+      if (!res.ok) throw new Error(`Failed to load lessons (${res.status})`);
+      const data = (await res.json()) as { available: AvailableLesson[] };
+      setAvailableLessons(data.available);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load lessons");
+      setAvailableLessons([]);
+    }
+  }, []);
+
+  const addFromLesson = useCallback(async () => {
+    if (!selectedLessonId) return;
+    setAdding(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/admin/public-iso-docs/from-lesson", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ policyDocLessonId: selectedLessonId }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(body.error ?? `Failed (${res.status})`);
+      }
+      setMessage("Added from existing lesson.");
+      setLessonPickerOpen(false);
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Add failed");
+    } finally {
+      setAdding(false);
+    }
+  }, [selectedLessonId, refresh]);
 
   const handleResolveLink = useCallback(async () => {
     const url = shareUrl.trim();
@@ -252,8 +307,64 @@ export function PublicIsoLibraryManager() {
           >
             Browse…
           </button>
+          <button
+            type="button"
+            onClick={() => void openLessonPicker()}
+            disabled={adding || resolving}
+            className="rounded-md border border-border text-xs text-foreground px-3 py-1.5 hover:bg-surface-muted disabled:opacity-50"
+          >
+            From lesson…
+          </button>
         </div>
       </div>
+
+      {lessonPickerOpen && (
+        <div className="rounded-lg border border-border bg-surface p-3 space-y-2">
+          <p className="text-xs font-medium text-foreground">
+            Add an existing POLICY_DOC lesson to the library
+          </p>
+          {availableLessons === null ? (
+            <p className="text-xs text-foreground-muted">Loading lessons…</p>
+          ) : availableLessons.length === 0 ? (
+            <p className="text-xs text-foreground-muted">
+              No POLICY_DOC lessons available to add (or all are already in the library).
+            </p>
+          ) : (
+            <select
+              value={selectedLessonId}
+              onChange={(e) => setSelectedLessonId(e.target.value)}
+              className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+            >
+              <option value="">Choose a lesson…</option>
+              {availableLessons.map((l) => (
+                <option key={l.policyDocLessonId} value={l.policyDocLessonId}>
+                  {(l.documentCode ? `${l.documentCode} · ` : "") +
+                    l.documentTitle +
+                    ` v${l.sourceVersion}` +
+                    ` — ${l.courseTitle} / ${l.lessonTitle}`}
+                </option>
+              ))}
+            </select>
+          )}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void addFromLesson()}
+              disabled={!selectedLessonId || adding}
+              className="rounded-md bg-primary text-primary-foreground text-xs px-3 py-1.5 hover:opacity-90 disabled:opacity-50"
+            >
+              {adding ? "Adding…" : "Add to library"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setLessonPickerOpen(false)}
+              className="rounded-md border border-border text-xs text-foreground px-3 py-1.5 hover:bg-surface-muted"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {message && <p className="text-xs text-foreground-muted">{message}</p>}
       {error && <p className="text-xs text-danger">{error}</p>}
@@ -299,6 +410,11 @@ export function PublicIsoLibraryManager() {
                 <p className="text-xs text-foreground-subtle mt-1">
                   Last synced {formatRel(row.lastSyncedAt)}
                   {row.lastSyncedBy?.name ? ` by ${row.lastSyncedBy.name}` : ""}
+                  {" · "}
+                  {row.viewCount} view{row.viewCount === 1 ? "" : "s"}
+                  {row.distinctViewers > 0
+                    ? ` from ${row.distinctViewers} ${row.distinctViewers === 1 ? "person" : "people"}`
+                    : ""}
                   {" · "}
                   <a
                     href={row.sharePointWebUrl}
