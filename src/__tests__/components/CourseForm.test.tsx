@@ -140,7 +140,7 @@ describe("CourseForm", () => {
     });
     fireEvent.click(screen.getByText("Create Course"));
 
-    expect(screen.getByText("Saving...")).toBeDisabled();
+    expect(screen.getByText("Saving…")).toBeDisabled();
 
     resolveSubmit();
   });

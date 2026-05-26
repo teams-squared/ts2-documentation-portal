@@ -69,7 +69,10 @@ export function LessonCompleteButton({
     return (
       <div className="flex flex-col items-start gap-1" data-testid="lesson-completed-state">
         <div className="flex items-center gap-2 text-sm font-medium text-success">
-          <CheckCircleIcon className="h-5 w-5" />
+          {/* scale-in on the check icon gives the moment of completion a
+              little body — pairs with the existing progress-affirm pulse
+              on the footer track (§9.4). */}
+          <CheckCircleIcon className="h-5 w-5 motion-safe:animate-scale-in" />
           Lesson complete
         </div>
         <button

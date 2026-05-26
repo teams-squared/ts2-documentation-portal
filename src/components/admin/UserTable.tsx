@@ -7,6 +7,8 @@ import { Spinner } from "@/components/ui/Spinner";
 import { SkeletonTableRow } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/ToastProvider";
+import { useMutationPulse } from "@/hooks/useMutationPulse";
+import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/types";
 
 interface User {
@@ -20,6 +22,7 @@ interface User {
 
 export default function UserTable() {
   const { toast } = useToast();
+  const { pulse, pulseClass } = useMutationPulse();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +67,7 @@ export default function UserTable() {
       setUsers((prev) =>
         prev.map((u) => (u.id === updated.id ? { ...u, role: updated.role } : u))
       );
+      pulse(updated.id);
       toast(`Role updated to ${newRole}`);
     } catch (err: unknown) {
       setUpdateError(err instanceof Error ? err.message : "Failed to update role");
@@ -130,7 +134,10 @@ export default function UserTable() {
             {users.map((user) => (
               <tr
                 key={user.id}
-                className="hover:bg-surface-muted transition-colors"
+                className={cn(
+                  "hover:bg-surface-muted transition-colors",
+                  pulseClass(user.id),
+                )}
               >
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-3">

@@ -7,6 +7,7 @@ import type { Role } from "@/lib/types";
 import type { NodeWithChildren } from "@/lib/courseNodes";
 import { InviteUserForm } from "@/components/admin/InviteUserForm";
 import { Button } from "@/components/ui/button";
+import { useListMorph } from "@/hooks/useListMorph";
 
 interface User {
   id: string;
@@ -42,6 +43,7 @@ export function UserList({ users, nodeTree, inviterRole }: UserListProps) {
   const [roleFilter, setRoleFilter] = useState<Role | "all">("all");
   const [page, setPage] = useState(1);
   const [showInvite, setShowInvite] = useState(false);
+  const morph = useListMorph();
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -60,13 +62,19 @@ export function UserList({ users, nodeTree, inviterRole }: UserListProps) {
   const pageUsers = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const handleSearch = (value: string) => {
-    setSearch(value);
-    setPage(1);
+    // Filter result-set reorder is the canonical useListMorph use case
+    // (design-system §9.11). Direct setState would snap; this cross-fades.
+    morph(() => {
+      setSearch(value);
+      setPage(1);
+    });
   };
 
   const handleRoleFilter = (value: Role | "all") => {
-    setRoleFilter(value);
-    setPage(1);
+    morph(() => {
+      setRoleFilter(value);
+      setPage(1);
+    });
   };
 
   return (

@@ -9,6 +9,7 @@ import { getNodeTree, getDescendantCourseIds, countCoursesInSubtree } from "@/li
 import { CourseCard } from "@/components/courses/CourseCard";
 import { SearchBar } from "@/components/courses/SearchBar";
 import { CatalogSidebar } from "@/components/courses/CatalogSidebar";
+import { RevealOnView } from "@/components/ui/RevealOnView";
 import { GraduationCapIcon, BookOpenIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
@@ -325,7 +326,7 @@ export default async function CourseCatalogPage({
             )}
 
             {allCourses.length === 0 ? (
-              <div className="py-20 text-center">
+              <RevealOnView className="py-20 text-center">
                 <GraduationCapIcon className="mx-auto mb-4 h-12 w-12 text-foreground-subtle" />
                 <p className="mb-2 text-base font-medium text-foreground">
                   {searchQuery ? "No courses found" : "No courses available yet"}
@@ -335,7 +336,7 @@ export default async function CourseCatalogPage({
                     ? `We couldn\u2019t find any courses matching \u201c${searchQuery}\u201d. Try a different search term.`
                     : "New courses are being added regularly. Check back soon!"}
                 </p>
-              </div>
+              </RevealOnView>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                 {allCourses.map((course) => {
@@ -365,7 +366,7 @@ export default async function CourseCatalogPage({
       {activeTab === "my" && (
         <>
           {myCourses.length === 0 ? (
-            <div className="py-20 text-center">
+            <RevealOnView className="py-20 text-center">
               <BookOpenIcon className="mx-auto mb-4 h-12 w-12 text-foreground-subtle" />
               <p className="mb-2 text-base font-medium text-foreground">
                 No courses yet
@@ -380,7 +381,7 @@ export default async function CourseCatalogPage({
                   <Link href="/courses">Browse all courses</Link>
                 </Button>
               )}
-            </div>
+            </RevealOnView>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {myCourses.map((course) => (

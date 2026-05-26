@@ -9,6 +9,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 
 interface CourseCompletionStats {
   totalLessons: number;
@@ -89,25 +90,28 @@ export function CourseCompletionModal({
             </DialogDescription>
           </DialogHeader>
 
-          {/* Stat tiles */}
+          {/* Stat tiles — numerics tween via <AnimatedNumber> for the
+              celebration beat. The +X XP tile prepends its sign manually
+              and animates only the integer. */}
           <div className="grid grid-cols-3 gap-3 w-full">
             <div className="flex flex-col items-center gap-1 rounded-lg border border-border bg-surface-muted px-3 py-4">
-              <span className="text-2xl font-bold tabular-nums text-foreground">
-                {stats.completedLessons}
+              <span className="text-2xl font-bold text-foreground">
+                <AnimatedNumber value={stats.completedLessons} />
               </span>
               <span className="text-xs text-foreground-muted">
                 Lesson{stats.completedLessons !== 1 ? "s" : ""}
               </span>
             </div>
             <div className="flex flex-col items-center gap-1 rounded-lg border border-border bg-surface-muted px-3 py-4">
-              <span className="text-2xl font-bold tabular-nums text-primary">
-                +{stats.xpEarned}
+              <span className="text-2xl font-bold text-primary tabular-nums">
+                +
+                <AnimatedNumber value={stats.xpEarned} />
               </span>
               <span className="text-xs text-foreground-muted">XP</span>
             </div>
             <div className="flex flex-col items-center gap-1 rounded-lg border border-border bg-surface-muted px-3 py-4">
-              <span className="text-2xl font-bold tabular-nums text-foreground">
-                {stats.daysTaken}
+              <span className="text-2xl font-bold text-foreground">
+                <AnimatedNumber value={stats.daysTaken} />
               </span>
               <span className="text-xs text-foreground-muted">
                 Day{stats.daysTaken !== 1 ? "s" : ""}

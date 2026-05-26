@@ -153,6 +153,34 @@ async function main() {
       'Table "ManualReminderLog" should exist',
     ),
   );
+  results.push(
+    await check(
+      "20260526000000_add_public_iso_doc",
+      () => tableExists("PublicIsoDoc"),
+      'Table "PublicIsoDoc" should exist',
+    ),
+  );
+  results.push(
+    await check(
+      "20260526010000_rewire_iso_library_view (IsoLibraryView exists)",
+      () => tableExists("IsoLibraryView"),
+      'Table "IsoLibraryView" should exist',
+    ),
+  );
+  results.push(
+    await check(
+      "20260526010000_rewire_iso_library_view (publicIsoDocId column)",
+      () => columnExists("IsoLibraryView", "publicIsoDocId"),
+      'Column "IsoLibraryView.publicIsoDocId" should exist (rewired from entryId)',
+    ),
+  );
+  results.push(
+    await check(
+      "20260526010000_rewire_iso_library_view (IsoLibraryEntry dropped)",
+      async () => !(await tableExists("IsoLibraryEntry")),
+      'Table "IsoLibraryEntry" should NOT exist after rewire',
+    ),
+  );
 
   // Print
   let pad = 0;

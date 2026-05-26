@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
+import { useListMorph } from "@/hooks/useListMorph";
 
 interface SearchBarProps {
   initialQuery?: string;
@@ -11,6 +12,7 @@ export function SearchBar({ initialQuery = "" }: SearchBarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(initialQuery);
+  const morph = useListMorph();
 
   const handleSearch = useCallback(
     (value: string) => {
@@ -20,9 +22,9 @@ export function SearchBar({ initialQuery = "" }: SearchBarProps) {
       } else {
         params.delete("q");
       }
-      router.push(`/courses?${params.toString()}`);
+      morph(() => router.push(`/courses?${params.toString()}`));
     },
-    [router, searchParams],
+    [router, searchParams, morph],
   );
 
   return (

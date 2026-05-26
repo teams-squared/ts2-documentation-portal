@@ -3,12 +3,14 @@
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useCallback } from "react";
 import { cn } from "@/lib/utils";
+import { useListMorph } from "@/hooks/useListMorph";
 
-export type IsoTabKey = "acks" | "coverage";
+export type IsoTabKey = "acks" | "coverage" | "library";
 
 const TABS: { key: IsoTabKey; label: string }[] = [
   { key: "acks", label: "Acknowledgements" },
   { key: "coverage", label: "Coverage" },
+  { key: "library", label: "Public library" },
 ];
 
 /** Returns the active tab from the URL (?tab=...) with safe fallback. */
@@ -26,13 +28,14 @@ export function IsoTabs() {
   const router = useRouter();
   const pathname = usePathname();
   const active = useActiveIsoTab();
+  const morph = useListMorph();
 
   const switchTo = useCallback(
     (next: IsoTabKey) => {
       const search = next === "acks" ? "" : `?tab=${next}`;
-      router.replace(`${pathname}${search}`, { scroll: false });
+      morph(() => router.replace(`${pathname}${search}`, { scroll: false }));
     },
-    [pathname, router],
+    [pathname, router, morph],
   );
 
   return (

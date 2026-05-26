@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { FormButton } from "@/components/ui/FormButton";
 import { useToast } from "@/components/ui/ToastProvider";
 import { EmailListInput } from "@/components/admin/EmailListInput";
 
@@ -103,9 +103,9 @@ export function IsoNotificationSettingsForm({
       )}
 
       <div className="flex items-center gap-3">
-        <Button type="submit" disabled={saving}>
-          {saving ? "Saving…" : "Save settings"}
-        </Button>
+        <FormButton type="submit" loading={saving} pendingLabel="Saving…">
+          Save settings
+        </FormButton>
         {updatedAt && (
           <span className="text-xs text-foreground-muted">
             Last updated {updatedAt.toLocaleString()}

@@ -8,6 +8,8 @@ const mockQueryRaw = vi.fn();
 (mockPrisma as unknown as { $queryRaw: typeof mockQueryRaw }).$queryRaw = mockQueryRaw;
 const mockPolicyFindFirst = vi.fn();
 mockPrisma.policyDocLesson.findFirst = mockPolicyFindFirst;
+const mockPublicFindFirst = vi.fn();
+mockPrisma.publicIsoDoc.findFirst = mockPublicFindFirst;
 
 vi.mock("@/lib/prisma", () => ({ default: mockPrisma, prisma: mockPrisma }));
 
@@ -22,6 +24,7 @@ describe("isAllowlistedSharePointItem", () => {
     const result = await isAllowlistedSharePointItem("", "item-1");
     expect(result).toBe(false);
     expect(mockPolicyFindFirst).not.toHaveBeenCalled();
+    expect(mockPublicFindFirst).not.toHaveBeenCalled();
     expect(mockQueryRaw).not.toHaveBeenCalled();
   });
 
@@ -29,10 +32,11 @@ describe("isAllowlistedSharePointItem", () => {
     const result = await isAllowlistedSharePointItem("drive-1", "");
     expect(result).toBe(false);
     expect(mockPolicyFindFirst).not.toHaveBeenCalled();
+    expect(mockPublicFindFirst).not.toHaveBeenCalled();
     expect(mockQueryRaw).not.toHaveBeenCalled();
   });
 
-  it("returns true on policy-doc match (fast path) and skips lesson scan", async () => {
+  it("returns true on policy-doc match (fast path) and skips later checks", async () => {
     mockPolicyFindFirst.mockResolvedValueOnce({ id: "pdl-1" });
 
     const result = await isAllowlistedSharePointItem("drive-1", "item-1");
@@ -42,11 +46,27 @@ describe("isAllowlistedSharePointItem", () => {
       where: { sharePointDriveId: "drive-1", sharePointItemId: "item-1" },
       select: { id: true },
     });
+    expect(mockPublicFindFirst).not.toHaveBeenCalled();
     expect(mockQueryRaw).not.toHaveBeenCalled();
   });
 
-  it("falls through to lesson scan when no policy-doc match", async () => {
+  it("returns true on public-iso-doc match and skips the lesson scan", async () => {
     mockPolicyFindFirst.mockResolvedValueOnce(null);
+    mockPublicFindFirst.mockResolvedValueOnce({ id: "pid-1" });
+
+    const result = await isAllowlistedSharePointItem("drive-1", "item-1");
+
+    expect(result).toBe(true);
+    expect(mockPublicFindFirst).toHaveBeenCalledWith({
+      where: { sharePointDriveId: "drive-1", sharePointItemId: "item-1" },
+      select: { id: true },
+    });
+    expect(mockQueryRaw).not.toHaveBeenCalled();
+  });
+
+  it("falls through to lesson scan when neither policy-doc nor public-iso match", async () => {
+    mockPolicyFindFirst.mockResolvedValueOnce(null);
+    mockPublicFindFirst.mockResolvedValueOnce(null);
     mockQueryRaw.mockResolvedValueOnce([{ id: "lesson-7" }]);
 
     const result = await isAllowlistedSharePointItem("drive-1", "item-1");
@@ -55,8 +75,9 @@ describe("isAllowlistedSharePointItem", () => {
     expect(mockQueryRaw).toHaveBeenCalledTimes(1);
   });
 
-  it("returns false when neither policy-doc nor any lesson references the item", async () => {
+  it("returns false when nothing references the item", async () => {
     mockPolicyFindFirst.mockResolvedValueOnce(null);
+    mockPublicFindFirst.mockResolvedValueOnce(null);
     mockQueryRaw.mockResolvedValueOnce([]);
 
     const result = await isAllowlistedSharePointItem("drive-rogue", "item-rogue");
@@ -66,6 +87,7 @@ describe("isAllowlistedSharePointItem", () => {
 
   it("escapes LIKE wildcards in driveId/itemId so attackers can't widen the match", async () => {
     mockPolicyFindFirst.mockResolvedValueOnce(null);
+    mockPublicFindFirst.mockResolvedValueOnce(null);
     mockQueryRaw.mockResolvedValueOnce([]);
 
     // `_` and `%` are SQL LIKE wildcards. If unescaped, `_` matches any single
@@ -87,6 +109,7 @@ describe("isAllowlistedSharePointItem", () => {
 
   it("escapes literal backslash as well as _ and %", async () => {
     mockPolicyFindFirst.mockResolvedValueOnce(null);
+    mockPublicFindFirst.mockResolvedValueOnce(null);
     mockQueryRaw.mockResolvedValueOnce([]);
 
     await isAllowlistedSharePointItem("d\\rive", "item");

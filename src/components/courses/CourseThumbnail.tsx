@@ -7,9 +7,10 @@ import { cn } from "@/lib/utils";
  * CourseThumbnail — design-system Section 8.2.1.
  *
  * Uniform 16:9 thumbnail used across dashboard, course catalog, and course
- * detail pages. If a real image is supplied it renders with `object-cover`;
- * otherwise we show a tinted empty state with the GraduationCap icon and the
- * course title as a small caption.
+ * detail pages. If a real image is supplied it renders with `object-contain`
+ * plus padding (so SVG/transparent images sit inside the tinted frame rather
+ * than washing it out); otherwise we show a tinted empty state with the
+ * GraduationCap icon.
  *
  * Usage:
  *   <CourseThumbnail title={course.title} src={course.thumbnail} />

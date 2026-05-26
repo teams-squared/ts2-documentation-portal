@@ -70,4 +70,47 @@ function SkeletonTableRow({ cols = 4 }: { cols?: number }) {
   )
 }
 
-export { Skeleton, SkeletonText, SkeletonCard, SkeletonCourseCard, SkeletonTableRow }
+function SkeletonGridItem() {
+  return (
+    <div
+      className="rounded-lg border border-border bg-card p-5"
+      aria-hidden="true"
+    >
+      <Skeleton className="aspect-square mb-3 rounded-lg" />
+      <Skeleton className="h-5 w-3/4 mb-2" />
+      <Skeleton className="h-3 w-1/2" />
+    </div>
+  )
+}
+
+function SkeletonListItem() {
+  return (
+    <div className="flex items-center gap-3 py-3 px-1" aria-hidden="true">
+      <Skeleton className="h-9 w-9 rounded-full shrink-0" />
+      <div className="flex-1 min-w-0 space-y-2">
+        <Skeleton className="h-4 w-2/3" />
+        <Skeleton className="h-3 w-1/2" />
+      </div>
+    </div>
+  )
+}
+
+function SkeletonFormField() {
+  return (
+    <div className="space-y-2" aria-hidden="true">
+      <Skeleton className="h-3.5 w-24" />
+      <Skeleton className="h-10 w-full rounded-md" />
+    </div>
+  )
+}
+
+export {
+  Skeleton,
+  SkeletonText,
+  SkeletonCard,
+  SkeletonCourseCard,
+  SkeletonTableRow,
+  SkeletonGridItem,
+  SkeletonListItem,
+  SkeletonFormField,
+}

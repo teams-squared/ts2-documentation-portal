@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Loader2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -72,8 +73,16 @@ export function ConfirmDialog({
             variant={destructive ? "destructive" : "default"}
             onClick={handleConfirm}
             disabled={loading || disabled}
+            aria-busy={loading || undefined}
           >
-            {loading ? "Working…" : confirmLabel}
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                Working…
+              </>
+            ) : (
+              confirmLabel
+            )}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

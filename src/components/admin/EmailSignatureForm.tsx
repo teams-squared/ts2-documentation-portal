@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { FormButton } from "@/components/ui/FormButton";
 import { useToast } from "@/components/ui/ToastProvider";
 
 interface SignatureValues {
@@ -337,9 +337,9 @@ export function EmailSignatureForm({
       )}
 
       <div className="flex items-center gap-3">
-        <Button type="submit" disabled={saving}>
-          {saving ? "Saving…" : "Save signature"}
-        </Button>
+        <FormButton type="submit" loading={saving} pendingLabel="Saving…">
+          Save signature
+        </FormButton>
         {updatedAt && (
           <span className="text-xs text-foreground-muted">
             Last updated {updatedAt.toLocaleString()}

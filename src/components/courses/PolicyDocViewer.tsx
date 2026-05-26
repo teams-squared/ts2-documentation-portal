@@ -60,6 +60,12 @@ export interface PolicyDocViewProps {
   /** If the learner has already completed this lesson, we skip the dwell/
    *  attestation gate — the ack is already captured. */
   alreadyCompleted?: boolean;
+  /** Controls the dwell-timer + attestation flow.
+   *  - "required" (default): the LMS-lesson behaviour — dwell, checkbox,
+   *    stale-ack banner, POLICY_ACK_EVENT dispatch.
+   *  - "none": read-only viewer (used by the public library at /policies).
+   *    No gating, no tracking — just Document Control panel + PDF iframe. */
+  acknowledgementMode?: "required" | "none";
 }
 
 interface RevisionRow {
@@ -123,7 +129,10 @@ export function PolicyDocViewer(props: PolicyDocViewProps) {
     sharePointWebUrl,
     lastAcknowledgement,
     alreadyCompleted = false,
+    acknowledgementMode = "required",
   } = props;
+
+  const ackRequired = acknowledgementMode === "required";
 
   const [showRevisionHistory, setShowRevisionHistory] = useState(false);
   const [showReviewHistory, setShowReviewHistory] = useState(false);
@@ -135,9 +144,10 @@ export function PolicyDocViewer(props: PolicyDocViewProps) {
 
   // Dwell: accumulated ms of focused-tab time. We tick a 100ms interval
   // only while document.visibilityState === "visible", so background tabs
-  // don't count.
+  // don't count. In read-only mode the timer is short-circuited to "done"
+  // so the attestation block + stale banner stay hidden.
   const [dwellMs, setDwellMs] = useState(() =>
-    alreadyCompleted ? DWELL_MS : readPersistedDwell(lessonId),
+    !ackRequired || alreadyCompleted ? DWELL_MS : readPersistedDwell(lessonId),
   );
 
   // Persist dwell to sessionStorage so a same-tab nav-away/back doesn't reset
@@ -145,6 +155,7 @@ export function PolicyDocViewer(props: PolicyDocViewProps) {
   // will short-circuit the timer on next mount anyway.
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!ackRequired) return;
     if (alreadyCompleted) return;
     try {
       if (dwellMs >= DWELL_MS) {
@@ -158,12 +169,13 @@ export function PolicyDocViewer(props: PolicyDocViewProps) {
     } catch {
       /* sessionStorage unavailable (e.g. Safari private mode) — silent fallback */
     }
-  }, [dwellMs, lessonId, alreadyCompleted]);
+  }, [dwellMs, lessonId, alreadyCompleted, ackRequired]);
 
   const [attested, setAttested] = useState(false);
   const firedRef = useRef(false);
 
   useEffect(() => {
+    if (!ackRequired) return;
     if (alreadyCompleted) return;
     if (dwellMs >= DWELL_MS) return;
 
@@ -191,7 +203,7 @@ export function PolicyDocViewer(props: PolicyDocViewProps) {
       stop();
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [dwellMs, alreadyCompleted]);
+  }, [dwellMs, alreadyCompleted, ackRequired]);
 
   // Fire the unlock event once dwell + attestation are both satisfied.
   // The event detail carries the observed dwell seconds at unlock time so
@@ -200,6 +212,7 @@ export function PolicyDocViewer(props: PolicyDocViewProps) {
   const dwellDone = dwellMs >= DWELL_MS;
   const unlocked = alreadyCompleted || (dwellDone && attested);
   useEffect(() => {
+    if (!ackRequired) return;
     if (!unlocked || firedRef.current) return;
     firedRef.current = true;
     window.dispatchEvent(
@@ -210,9 +223,10 @@ export function PolicyDocViewer(props: PolicyDocViewProps) {
         },
       }),
     );
-  }, [unlocked, lessonId, dwellMs]);
+  }, [unlocked, lessonId, dwellMs, ackRequired]);
 
   const isStaleAck =
+    ackRequired &&
     lastAcknowledgement?.version != null &&
     lastAcknowledgement.version !== sourceVersion;
 
@@ -343,7 +357,7 @@ export function PolicyDocViewer(props: PolicyDocViewProps) {
           Acknowledge button is locked until the timer hits zero. Earlier
           wording ("Reading time required") left users wondering why the
           button stayed disabled. Now spells out the cause and consequence. */}
-      {!alreadyCompleted && !dwellDone && (
+      {ackRequired && !alreadyCompleted && !dwellDone && (
         <div
           className="mb-2 flex items-center gap-3 rounded-md border border-info/60 bg-info-subtle px-3 py-2"
           title="Background tabs don't count. Keep this page visible while you read."
@@ -386,8 +400,9 @@ export function PolicyDocViewer(props: PolicyDocViewProps) {
       </div>
 
       {/* Attestation block. Hidden entirely on re-visit of a completed
-          lesson — the ack is already banked. */}
-      {!alreadyCompleted && (
+          lesson — the ack is already banked. Also hidden in read-only mode
+          (public library at /policies). */}
+      {ackRequired && !alreadyCompleted && (
         <section
           aria-label="Acknowledgement"
           className="mb-6 rounded-lg border border-border bg-surface p-4"

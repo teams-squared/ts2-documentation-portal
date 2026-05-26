@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronRightIcon, ChevronDownIcon } from "@/components/icons";
+import { useListMorph } from "@/hooks/useListMorph";
 
 export interface SidebarNode {
   id: string;
@@ -19,6 +20,7 @@ interface CatalogSidebarProps {
 export function CatalogSidebar({ nodes, activeNodeId }: CatalogSidebarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const morph = useListMorph();
   const [expanded, setExpanded] = useState<Set<string>>(() => {
     // Auto-expand the path to the active node
     if (!activeNodeId) return new Set<string>();
@@ -56,7 +58,7 @@ export function CatalogSidebar({ nodes, activeNodeId }: CatalogSidebarProps) {
     // Remove old category param
     params.delete("category");
     const qs = params.toString();
-    router.push(`/courses${qs ? `?${qs}` : ""}`);
+    morph(() => router.push(`/courses${qs ? `?${qs}` : ""}`));
   };
 
   const renderNode = (node: SidebarNode, depth: number) => {

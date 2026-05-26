@@ -807,48 +807,232 @@ En-dashes (`–`) for numeric ranges (`Mon–Fri`, `Jan–Mar`) are fine. Hyphen
 
 ## 9. Motion & interaction
 
-### 9.1 Durations
+Motion exists to communicate state change — not to decorate. Every animation in the app earns its place by either (a) confirming that user intent landed, (b) revealing structure as new content arrives, or (c) signaling the system is alive while waiting on data. Anything else is noise. The token, utility, and primitive layers below are the only sanctioned vocabulary; ad-hoc `transition-duration-200` or one-off keyframes should migrate onto them.
 
-| Duration | Use |
-|---|---|
-| 100ms | Tiny state changes (checkbox toggle, button press) |
-| 150ms | Hover states (card lift, color shift) |
-| 180ms | Modal enter |
-| 120ms | Modal exit (faster than enter) |
-| 250ms | Drawer/sheet enter |
-| 400ms | Progress bar fill animation |
+### 9.1 Motion tokens
 
-### 9.2 Easing
+Motion is tokenized like color and spacing. **Never hardcode a duration or easing function in component CSS** — bind to a token so timing stays coherent across the app.
 
-- `ease-out` for entering (default — elements arrive and settle)
-- `ease-in` for exiting
-- Avoid `ease-in-out` except for loops
+Durations (in `src/app/globals.css`):
 
-### 9.3 Reduced motion
+| Token | Value | Use |
+|---|---|---|
+| `--duration-instant` | 100ms | Button press, checkbox flip — too short for the eye to track, just enough to feel responsive |
+| `--duration-fast` | 150ms | Hover state changes (background, border, color) — the surface-interactive default |
+| `--duration-base` | 200ms | Modal/drawer enter, most micro-transitions |
+| `--duration-slow` | 300ms | Lesson thumbnail inner scale, drawer/sheet enter, larger surface morphs |
+| `--duration-reveal` | 220ms | One-shot entrance reveals (`<RevealOnView>` opacity + Y rise) |
+| `--duration-affirm` | 600ms | Completion-pulse affirmations (progress-bar fill on lesson complete, XP count-up) |
+| `--duration-ambient-shimmer` | 1600ms | Skeleton-shimmer loop, progress-bar shimmer highlight |
+| `--duration-ambient-breathe` | 8s | Reserved for slow breathing/idle indicators (not currently consumed) |
+| `--duration-ambient-drift` | 28s | Hero gradient slow drift |
 
-**Required:** Wrap all transitions in `motion-safe:` or respect `prefers-reduced-motion` via CSS:
+The four "ambient" tokens are intentionally long. They exist for **background-of-attention** motion — never for anything the user is acting on.
 
-```css
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
+Easing:
+
+| Token | Curve | Use |
+|---|---|---|
+| `--ease-out-expo` | `cubic-bezier(0.16, 1, 0.3, 1)` | Default for entering / settling — arrives fast, decelerates into rest |
+| `--ease-in-out-quart` | `cubic-bezier(0.76, 0, 0.24, 1)` | Loops only (shimmer, breathe, drift) where symmetry is the point |
+| `--ease-out-back` | `cubic-bezier(0.34, 1.56, 0.64, 1)` | Affirmation overshoots only — completion pulse, success badge appear. Never on hover |
+
+> **Mandate:** entrances use `--ease-out-expo`. Loops use `--ease-in-out-quart`. Overshoots are reserved for one-shot affirmations; never use `--ease-out-back` on a hover or recurring transition — the springy overshoot reads as bug, not delight, when repeated.
+
+### 9.2 Surface utilities
+
+Two CSS utilities encapsulate the interactive vocabulary so consumers don't repeatedly spell out `transition-colors duration-150 ease-out`.
+
+**`.surface-interactive`** — applied to every clickable surface that isn't a primary button (card, row, badge-as-link, sidebar item). Transitions `background-color, border-color, box-shadow, color` over `--duration-fast` with `--ease-out-expo`. Migrate ad-hoc `transition-colors` strings onto this utility as you touch them.
+
+**`.hover-lift`** — canonical card hover. Strengthens the border, raises to `--shadow-card-md`, and (motion-safe only) translates `-2px` up while promoting the element to its own stacking context via `z-index: 10`. The stacking context is non-negotiable — without it, the lifted top edge slips behind the next sibling card and the lift visually pops in/out as the cursor crosses the gap. Reduced-motion users still receive the border + shadow change, just not the translate.
+
+> **Mandate:** every clickable card uses `.hover-lift` — do not roll bespoke hover patterns with custom transforms or shadows. Lift is the single canonical card-hover affordance.
+
+Shadow tokens supporting the above: `--shadow-card-sm` (resting card) and `--shadow-card-md` (hovered or elevated card). Both have light + dark mode definitions; the dark variants include an inset highlight to lift cards off near-black surfaces.
+
+### 9.3 Motion primitives
+
+Two React primitives encapsulate the journey-reveal patterns. Use these instead of writing IntersectionObserver or `requestAnimationFrame` per component.
+
+**`<RevealOnView>`** (`src/components/ui/RevealOnView.tsx`)
+
+One-shot entrance reveal. Wraps content that should fade + rise into place the first time it crosses the viewport, then disconnects the observer (no continuous scroll coupling — this is explicitly *not* parallax). Stagger sibling reveals with the `delay` prop (typical cadence: 0 / 60 / 120ms).
+
+```tsx
+<RevealOnView>
+  <NextStepBanner ... />
+</RevealOnView>
+<RevealOnView delay={60}>
+  <DeadlineAlerts ... />
+</RevealOnView>
+<RevealOnView delay={120}>
+  <CourseProgressList ... />
+</RevealOnView>
 ```
 
-For shadcn/ui components using `tw-animate-css`, use the `motion-safe:` variant on animation classes.
+Reduced-motion users see fully revealed content on mount — the primitive reads `prefers-reduced-motion` at mount via a lazy initializer, so the very first paint already returns the revealed state. No flicker, no observer ever wires up.
 
-### 9.4 Forbidden motion
+**`<AnimatedNumber>`** (`src/components/ui/AnimatedNumber.tsx`)
 
-- Parallax scroll effects
-- Scroll-triggered animations on primary content
-- Auto-playing decorative animations
-- Bouncy/elastic easing (springy effects)
-- Motion longer than 400ms for UI feedback
+Count-up tween for numeric values that should "land" rather than appear. Default duration `--duration-affirm` (600ms), ease-out cubic implemented in JS. Pass `format` to animate formatted strings (durations, percentages) alongside the number — the formatter receives in-flight values, not just the final. Always renders inside a `tabular-nums` span so digits don't shift width as they tick.
+
+```tsx
+<AnimatedNumber value={user.xp} />
+<AnimatedNumber value={progress} format={(n) => `${Math.round(n)}%`} />
+```
+
+`value={null}` renders nothing — use this to suppress the `0` flash while loading. Reduced-motion users skip the tween and receive the final value immediately, gated by an explicit `matchMedia` check (rAF loops aren't covered by the global `transition-duration: 0.01ms` rule — see §9.6).
+
+### 9.4 Journey patterns
+
+Three composed patterns built from the tokens, utilities, and primitives above. These are the only sanctioned multi-element motion patterns in the app.
+
+**Page-load stagger.** Dashboard, course catalog, and admin index pages reveal their primary sections with 0 / 60 / 120ms `<RevealOnView>` cascade. Cap at three steps — staggering five sections at 200ms each ends up feeling like a loading screen, not a reveal. Hero / header is never wrapped (it's already on-screen at first paint).
+
+**Scroll-tick lesson footer.** The lesson-page footer progress track shows two fills: the saved progress (primary) and a secondary fill (`bg-primary/30`) that tracks live scroll depth through the lesson body. The secondary fill is read-only feedback — it does not write progress; the **Mark complete** button still does. Implementation in `src/components/courses/LessonFooter.tsx`.
+
+**Completion affirm pulse.** When a lesson transitions to completed, the footer progress fill runs `.animate-progress-affirm` once — a `scaleY` lift to 1.6× over `--duration-affirm` with a brief box-shadow halo, eased with `--ease-out-back`. This is the canonical "your action landed" affordance for terminal state changes (lesson complete, course complete, ack submitted). Do not stack it with confetti or other reward motion on the same event — pick one.
+
+### 9.5 Course-card thumbnail lift
+
+The course card composes `.hover-lift` (outer geometry) with an inner thumbnail `motion-safe:group-hover:scale-[1.03]` over `duration-slow` with `ease-out-expo`. The two motions are intentionally desynced: the outer lift is fast (`--duration-fast`, 150ms) and the inner image scale is slow (300ms), so the card answers immediately and the image sells the depth a beat later. Don't unify the durations or both motions become a single, blander event.
+
+### 9.6 Reduced motion
+
+Reduced motion is honored in **three layers** because no single layer covers everything:
+
+1. **Global CSS kill-switch** (`@media (prefers-reduced-motion: reduce)` in `globals.css`) — sets `animation: none !important` on every named `.animate-*` class and `transition-duration: 0.01ms` on all selectors. Catches CSS keyframes and transitions.
+2. **`motion-safe:` Tailwind variants** — used on `transform`, `transition`, and animation classes that should *only* engage when motion is allowed. Catches utility-class motion the global kill-switch doesn't see (e.g. `motion-safe:hover:scale-[1.03]`).
+3. **Explicit JS short-circuit in primitives** — `<RevealOnView>` and `<AnimatedNumber>` read `window.matchMedia("(prefers-reduced-motion: reduce)")` directly and return the final state without ever starting an observer or rAF loop. **This layer is mandatory** for any new JS-driven animation; the global CSS rule does not stop a running `requestAnimationFrame` loop or an IntersectionObserver from firing.
+
+> **Mandate:** when adding a new motion primitive that uses JS (rAF, observers, timers), the reduced-motion check must short-circuit the *JS path*, not just the CSS. Wrapping a tweening loop in a `motion-safe:` class only hides the visual effect — the loop still runs and burns the main thread.
+
+Verify by toggling **System Settings → Accessibility → Reduce motion** on macOS / **Settings → Ease of Access → Display → Show animations** on Windows. All entrances should resolve to their final state on first paint with no visible motion.
+
+### 9.7 Forbidden motion
+
+- Parallax scroll effects (continuous scroll-position coupling — `<RevealOnView>` is one-shot and disconnects, which is the carve-out).
+- Scroll-triggered animations on primary content (text reflow, layout shifts).
+- Auto-playing decorative animations that loop indefinitely on the primary content area — ambient motion is reserved for hero / background surfaces under the §9.12 budget (see carve-out below).
+- Bouncy/elastic easing on recurring transitions (`--ease-out-back` is one-shot affirmations only — see §9.1 mandate).
+- Motion longer than 400ms for UI feedback (hover, click, focus). The 600ms `--duration-affirm` is the carve-out for terminal-state celebrations only.
+- Hardcoded durations or easing curves in component CSS. Bind to a token from §9.1 — if no token fits, the answer is to add a token, not to write a magic number.
+
+**Ambient carve-out:** the "auto-playing decorative animations" rule has one carefully-scoped exception. A single ambient-breathing or gradient-drifting overlay on a hero surface (dashboard WelcomeBar, login hero, etc.) is permitted under the §9.12 budget — compositor-only, visibility-paused, one element per page max. Anything broader violates the rule.
+
+### 9.8 Submit-state buttons (`<FormButton>`)
+
+Every form submit in the app routes through `<FormButton>` (`src/components/ui/FormButton.tsx`). Bespoke `<button type="submit" disabled={saving}>{saving ? "Saving…" : "Save"}</button>` patterns should migrate onto this primitive as you touch them.
+
+States:
+
+- **idle** — renders the button label.
+- **pending** — renders an inline `Loader2` spinner + the `pendingLabel` prop (defaults to children + "…"). `disabled` is forced true; `aria-busy="true"` is set.
+- **success** — renders an inline `Check` icon + the `successLabel` prop (defaults to children). Held for `successHoldMs` (default 1200ms) then reverts to idle.
+
+```tsx
+<FormButton type="submit" loading={isPending} success={justSaved} pendingLabel="Saving…">
+  Save signature
+</FormButton>
+```
+
+Loading detection: inside a `<form>` the button reads React 19's `useFormStatus()` automatically. Outside a form (fetch-based submits), pass `loading={isPending}` explicitly.
+
+The `success` prop is **edge-triggered** — set it `true` once after the mutation resolves and the button manages the hold + revert. Consumer does not need to clear it.
+
+> **Mandate:** new form-submission UI must use `<FormButton>` for the primary action. The success affirmation closes the loop the operator started; without it, the only feedback is a toast that may auto-dismiss before they look back at the form.
+
+### 9.9 Mutation pulse on rows / cards (`useMutationPulse`)
+
+When the user mutates a row in a list (role change, status flip, enrollment toggle), the just-mutated row briefly highlights so they don't lose track of which row updated. This is the canonical "your action landed" affordance on dense surfaces where a toast alone doesn't anchor the change visually.
+
+```tsx
+const { pulse, pulseClass } = useMutationPulse();
+async function onRoleChange(userId: string, role: Role) {
+  await updateUserRole(userId, role);
+  pulse(userId);
+}
+return (
+  <tr className={cn("hover:bg-surface-muted", pulseClass(user.id))}>...</tr>
+);
+```
+
+Implementation: `pulse(id)` adds the `surface-pulse` class for 1100ms (one `--duration-affirm` cycle + decay), then removes it. Backed by the `surfacePulse` keyframe in `globals.css` — accent-tinted background fade in, fade out, eased with `--ease-out-expo`.
+
+**Budget:** one row pulsing at a time on a given table is the norm. Mass-mutation flows (bulk delete, bulk reassign) should pulse only the most-recently-changed row, not all of them — a wall of pulses reads as confusion, not feedback.
+
+### 9.10 List morph on filter / sort (`useListMorph`)
+
+Result-set reorder (filter, sort, search) should cross-fade rather than snap. `useListMorph` wraps `document.startViewTransition` so the browser captures pre-state, runs the state update, captures post-state, and animates the difference.
+
+```tsx
+const morph = useListMorph();
+const onFilterChange = (next: Filter) => {
+  morph(() => setFilter(next));
+};
+```
+
+Falls through to the callback directly on SSR, on browsers without `startViewTransition` (Firefox today), and when `prefers-reduced-motion: reduce` is set — so callers can use it unconditionally.
+
+> **Mandate:** any state update that reorders or filters a visible list passes through `useListMorph`. Direct `setState` snaps; the morph reads as careful even when the result set is small.
+
+### 9.11 Focus glow (ambient layer)
+
+Adds a wide, low-alpha brand-tinted halo OUTSIDE the canonical 2px `focus-visible:ring-2` (§10.1). Reads as "this surface is alive" rather than the sharp keyboard ring — both layers coexist, the ring is mandatory and remains the keyboard-affordance signal.
+
+Two consumer patterns:
+
+- `.focus-glow` — apply directly to a focusable element. The element receives the halo on `:focus-visible`. Already applied to `<Input>` (`src/components/ui/input.tsx`).
+- `.focus-glow-within` — apply to a container so the halo appears when a descendant receives keyboard focus, via `:has(:focus-visible)`. Use on cards that wrap inputs or focusable controls.
+
+```html
+<input class="focus-glow ..." />
+<div class="focus-glow-within ..."><input ... /></div>
+```
+
+Transitions the box-shadow over `--duration-fast` with `--ease-out-expo`. Reduced-motion users see the halo without the transition fade.
+
+### 9.12 Ambient motion budget
+
+Ambient motion is the quiet "alive when idle" layer — gradient drift, surface breathing, focus glow. The rules below keep it from accumulating into noise.
+
+**Per-page budget:**
+
+- **One** breathing-overlay surface (`.surface-breathe`) per page maximum. Dashboard uses WelcomeBar; login uses the brand-gradient hero; admin index uses the AnimatedNumber + stagger combo instead (no breath).
+- **One** gradient-drift surface (`.animate-gradient-drift`) per page maximum. Login uses the brand gradient.
+- Focus glow (`.focus-glow`, `.focus-glow-within`) has no per-page limit — it's input-anchored, only one element is focused at a time.
+
+**Compositor-only properties only:**
+
+- Permitted: `opacity`, `transform`, `filter` (sparingly), `background-position` (gradient drift).
+- Forbidden in ambient classes: animating `background-color`, `width`, `height`, `border-color`. Those belong to Stage A pulse / hover patterns, not Stage B ambient.
+
+**Visibility gating:** `<AmbientMotionGate>` toggles `html.ambient-paused` based on `useDocumentVisible()`. When the tab is hidden, every `.animate-gradient-drift` and `.surface-breathe` pauses via `animation-play-state: paused`. Saves CPU and battery on background tabs. Any new ambient animation **must** be covered by the `html.ambient-paused` selector in `globals.css` (extend the existing rule).
+
+**Sources:**
+
+- `.surface-breathe` keyframe: opacity 0.92 ↔ 1.0 over `--duration-ambient-breathe` (8s) with `--ease-in-out-quart`.
+- `.animate-gradient-drift` keyframe: `background-position` 0% ↔ 100% over `--duration-ambient-drift` (28s).
+- `.focus-glow*` keyframes: none — these are static `box-shadow` rules with a transition on focus state change, not loops.
+
+> **Mandate:** before adding a new ambient class, count what's already breathing on the same page. If you can't justify why a second ambient surface earns its place over the existing one, you don't need it.
+
+### 9.13 Personality signatures
+
+The handful of moments where the product earns a recognisable voice. Each signature is anchored to a specific moment of user accomplishment or first impression. Adding new signature moments requires a real product reason — not a "wouldn't this be cool" reason.
+
+**Welcome wordmark (dashboard hero).** The greeting subline in `<WelcomeBar>` renders as a slow gradient drift via `background-clip: text` + `--duration-ambient-drift` (28s). Lives inside the §9.12 budget (the WelcomeBar hero already hosts the breathing overlay; the wordmark is the foreground accent within the same hero, not a second ambient surface). Reduced motion shows the static gradient end-state.
+
+**Lesson-complete moment (LessonCompleteButton + footer).** The footer progress-bar `progressAffirm` pulse (already shipped) plus a `motion-safe:animate-scale-in` on the `CheckCircleIcon` when the button transitions to its completed state. The button changes shape *and* the icon arrives — two cooperating signals that say "your action landed."
+
+**Achievement unlock (AchievementCard).** Unlocked cards play `motion-safe:animate-scale-in` on their icon at mount, consuming the `scaleIn` keyframe with `--ease-out-back` (already paid for in `globals.css`, previously unused). Locked cards stay flat. The mounted-arrival behaviour means the profile achievements grid feels like trophies appearing rather than a static gallery.
+
+**Course-complete celebration (CourseCompletionModal).** Stat tiles tween via `<AnimatedNumber>` so the lessons / XP / days numbers count up rather than appearing fixed. Confetti and pulse-glow already in place. The cumulative effect — confetti + count-up + pulse — is the single biggest celebration moment in the app; reserve confetti for course completion only.
+
+**Course-card → detail shared-element morph (DEFERRED).** Planned for Stage C; the App Router's client-side navigation needs deeper integration with `document.startViewTransition` than CSS `@view-transition { navigation: auto; }` alone provides. Re-evaluate once React's `<ViewTransition>` export stabilises (the `experimental.viewTransition` flag in `next.config.ts` is already set; a future commit can adopt it without further code changes).
+
+> **Mandate:** new personality signatures require a written product justification ("this moment matters because…"). Without one, default to the §9.8–§9.12 floors — those are enough.
 
 ---
 
@@ -1112,3 +1296,31 @@ Applying `ring-2 ring-ring` in a default class list causes persistent rings on m
 ### Hero banners are not brand billboards
 
 A hero banner's background is always a neutral surface (`bg-surface-muted`). The brand accent lives in specific elements within the hero (avatar circles, progress fills, primary CTAs). The moment a hero uses `bg-primary` as its root background, the design thesis has been violated. This is the single most-commonly regressed rule — check it first when reviewing dashboard screenshots.
+
+### Reduced motion must short-circuit the JS path, not just the CSS
+
+The global `prefers-reduced-motion` CSS rule sets `animation: none` and `transition-duration: 0.01ms` — that handles keyframes and CSS transitions. It does **not** stop a `requestAnimationFrame` loop, an IntersectionObserver firing, or a `setTimeout` resolving. Any JS-driven motion (count-up tweens, scroll-reveal observers, staggered timers) must read `matchMedia("(prefers-reduced-motion: reduce)")` explicitly and return the final state without starting the loop. `<RevealOnView>` and `<AnimatedNumber>` are the canonical patterns — copy their lazy-initializer + early-return shape.
+
+### `.hover-lift` needs its own stacking context
+
+The lifted top edge of a card translates `-2px` up. Without `z-index: 10` on `:hover`, that edge renders behind the next sibling card in DOM order and the lift visually pops in/out as the cursor crosses the gap between cards. The stacking-context promotion is baked into `.hover-lift` — never override `z-index` on a hovered card or you'll resurface the bug.
+
+### Outer card lift and inner thumbnail scale are intentionally desynced
+
+Course cards use `--duration-fast` (150ms) on the outer `.hover-lift` and `--duration-slow` (300ms) on the inner thumbnail's `motion-safe:group-hover:scale-[1.03]`. Don't unify them. The fast outer answer says "I noticed your hover"; the slow inner scale sells depth. Equal durations collapse both into a single, blander event.
+
+### Tweening numbers must use `tabular-nums`
+
+`<AnimatedNumber>` wraps its output in `tabular-nums` because proportional digits shift width as the value ticks (the `1` is narrower than the `0`), causing the number's right edge to jitter. Any new numeric tween primitive must include the same — and the parent layout must not horizontally center the number (centering re-introduces the jitter even with `tabular-nums`, since the bounding box still wobbles).
+
+### `.surface-pulse` animates `background-color`, which is not strictly compositor-only
+
+The mutation-pulse class fades a background colour rather than animating a compositor property. This is acceptable at admin-table volumes (one row pulsing at a time, ≤50 rows in viewport) — the browser handles a single background-colour fade without dropping frames. If a perf trace ever flags it (likely under bulk-mutation flows or low-end Android), the fallback is a positioned `::after` overlay animating `opacity` instead. Don't switch preemptively; switch when traced.
+
+### `useListMorph` is client-only — needs a `"use client"` boundary
+
+`document.startViewTransition` is a browser API. Server Components can't call `useListMorph`. Wrap the consumer in a client component (every existing consumer is already `"use client"`). If you find yourself wanting list-morph behaviour on a Server Component, lift the morph-relevant state into a client child rather than trying to call the hook server-side.
+
+### `<FormButton>` success is edge-triggered, not level
+
+Setting `success={true}` once kicks the affirmation. Setting it `true` again on the next render (without a transition through `false`) does not re-kick — the button latches on the rising edge. Consumer code should treat `success` as a transient signal: flip it true after the mutation resolves, don't bother flipping it back. If your code accidentally renders `success={true}` permanently after the first success, every subsequent render through-the-component is a no-op (the button stays in its post-hold idle state). If you need to re-affirm the same success state, flip through `false` first.

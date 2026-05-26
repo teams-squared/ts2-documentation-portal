@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/ToastProvider";
 import { CourseNodeTree } from "@/components/admin/CourseNodeTree";
 import { Button } from "@/components/ui/button";
+import { FormButton } from "@/components/ui/FormButton";
 import type { NodeWithChildren } from "@/lib/courseNodes";
 import type { Role } from "@/lib/types";
 
@@ -447,17 +448,15 @@ export function InviteUserForm({
       {error && <p className="text-sm text-danger">{error}</p>}
 
       <div className="flex items-center gap-2">
-        <Button
+        <FormButton
           type="submit"
           size="sm"
-          disabled={submitting || pendingCount === 0}
+          loading={submitting}
+          disabled={pendingCount === 0}
+          pendingLabel="Sending…"
         >
-          {submitting
-            ? "Sending…"
-            : pendingCount === 1
-              ? "Send invite"
-              : `Send ${pendingCount} invites`}
-        </Button>
+          {pendingCount === 1 ? "Send invite" : `Send ${pendingCount} invites`}
+        </FormButton>
         <Button
           type="button"
           variant="secondary"

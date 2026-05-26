@@ -101,6 +101,15 @@ export const mockPrisma = {
     delete: vi.fn(),
     count: vi.fn().mockResolvedValue(0),
   },
+  publicIsoDoc: {
+    findUnique: vi.fn(),
+    findFirst: vi.fn(),
+    findMany: vi.fn().mockResolvedValue([]),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    count: vi.fn().mockResolvedValue(0),
+  },
   // Supports both array-form and callback-form. Callback form is used by
   // routes that need to atomically combine multiple writes (e.g. the
   // policy-doc sync transaction).
@@ -178,5 +187,11 @@ export const mockPrisma = {
     findMany: vi.fn().mockResolvedValue([]),
     create: vi.fn().mockResolvedValue({}),
     createMany: vi.fn().mockResolvedValue({ count: 0 }),
+  },
+  isoLibraryView: {
+    findMany: vi.fn().mockResolvedValue([]),
+    create: vi.fn().mockResolvedValue({}),
+    groupBy: vi.fn().mockResolvedValue([]),
+    count: vi.fn().mockResolvedValue(0),
   },
 };

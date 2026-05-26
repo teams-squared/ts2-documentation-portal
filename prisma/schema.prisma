@@ -37,8 +37,11 @@ model User {
   clearances          UserClearance[]
   deadlineReminderLogs DeadlineReminderLog[]
   policyDocSyncs      PolicyDocLesson[]    @relation("PolicyDocSyncs")
+  publicIsoDocSyncs   PublicIsoDoc[]       @relation("PublicIsoDocSyncs")
+  publicIsoDocsPublished PublicIsoDoc[]    @relation("PublicIsoDocsPublished")
   manualRemindersReceived ManualReminderLog[] @relation("ManualReminderTarget")
   manualRemindersSent     ManualReminderLog[] @relation("ManualReminderSender")
+  isoLibraryViews     IsoLibraryView[]
 }
 
 enum CourseStatus {
@@ -183,6 +186,70 @@ model PolicyDocLesson {
   updatedAt           DateTime            @updatedAt
 
   @@index([documentCode])
+}
+
+/// Curated SharePoint-backed ISO document exposed in the public library
+/// at /policies. Independent of any course or Lesson — visible to any
+/// logged-in LMS user regardless of enrollment. No acknowledgement
+/// pipeline; this is read-reference, not compliance evidence.
+model PublicIsoDoc {
+  id                  String   @id @default(cuid())
+
+  // Source pointer (SharePoint)
+  sharePointDriveId   String
+  sharePointItemId    String
+  sharePointWebUrl    String
+
+  // Snapshot from last sync — same parser output as PolicyDocLesson, minus
+  // renderedHTML/Hash (no audit snapshot since there's no ack obligation).
+  documentTitle       String
+  documentCode        String?
+  sourceVersion       String
+  sourceETag          String
+  sourceLastModified  DateTime
+  approver            String?
+  approvedOn          DateTime?
+  lastReviewedOn      DateTime?
+  reviewHistory       Json
+  revisionHistory     Json
+
+  // Display
+  sortOrder           Int      @default(0)
+
+  // Provenance
+  publishedAt         DateTime @default(now())
+  publishedById       String
+  publishedBy         User     @relation("PublicIsoDocsPublished", fields: [publishedById], references: [id], onDelete: Restrict)
+
+  // Sync bookkeeping
+  lastSyncedAt        DateTime
+  lastSyncedById      String
+  lastSyncedBy        User     @relation("PublicIsoDocSyncs", fields: [lastSyncedById], references: [id], onDelete: Restrict)
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  views               IsoLibraryView[]
+
+  @@unique([sharePointDriveId, sharePointItemId])
+  @@index([sortOrder])
+  @@index([documentCode])
+}
+
+/// Audit row — one per /policies/[id] open. Best-effort, fire-and-forget
+/// from the viewer route. Not used for ack evidence — see LessonProgress
+/// for that. Gives admins visibility into which public docs get read.
+model IsoLibraryView {
+  id              String       @id @default(cuid())
+  publicIsoDocId  String
+  publicIsoDoc    PublicIsoDoc @relation(fields: [publicIsoDocId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  viewedAt        DateTime     @default(now())
+  sourceVersion   String?
+
+  @@index([publicIsoDocId, viewedAt])
+  @@index([userId, viewedAt])
 }
 
 model Enrollment {

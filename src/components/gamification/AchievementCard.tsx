@@ -28,7 +28,12 @@ export function AchievementCard({ icon, title, description, unlockedAt }: Achiev
     >
       <div className="mb-2" role="img" aria-label={title}>
         {/* eslint-disable-next-line react-hooks/static-components */}
-        <Icon className="w-8 h-8 text-primary" aria-hidden="true" />
+        <Icon
+          className={`w-8 h-8 text-primary ${
+            isLocked ? "" : "motion-safe:animate-scale-in"
+          }`}
+          aria-hidden="true"
+        />
       </div>
       <h3 className="text-base font-semibold text-foreground mb-0.5">
         {title}

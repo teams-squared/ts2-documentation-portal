@@ -10,6 +10,7 @@ import {
   ChevronRightIcon,
   SearchIcon,
 } from "@/components/icons";
+import { useListMorph } from "@/hooks/useListMorph";
 import type { CourseSegment, StudentRow } from "@/lib/courseProgress";
 
 interface Props {
@@ -24,6 +25,7 @@ type Filtered = CourseSegment & {
 export function CourseProgressTable({ segments }: Props) {
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const morph = useListMorph();
 
   const q = query.trim().toLowerCase();
   const filtered = useMemo<Filtered[]>(() => {
@@ -69,7 +71,10 @@ export function CourseProgressTable({ segments }: Props) {
         <input
           type="search"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            const next = e.target.value;
+            morph(() => setQuery(next));
+          }}
           placeholder="Search courses or students…"
           className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-border bg-surface text-foreground placeholder:text-foreground-subtle focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
         />

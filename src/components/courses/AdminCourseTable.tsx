@@ -13,6 +13,9 @@ import {
 import { Spinner } from "@/components/ui/Spinner";
 import { SkeletonTableRow } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/button";
+import { useMutationPulse } from "@/hooks/useMutationPulse";
+import { useListMorph } from "@/hooks/useListMorph";
+import { cn } from "@/lib/utils";
 import type { CourseStatus } from "@/lib/types";
 
 interface Course {
@@ -49,6 +52,8 @@ async function apiFetch<T>(
 const PAGE_SIZE = 25;
 
 export default function AdminCourseTable({ nodeTree = [] }: { nodeTree?: NodeTreeItem[] }) {
+  const { pulse, pulseClass } = useMutationPulse();
+  const morph = useListMorph();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -198,6 +203,7 @@ export default function AdminCourseTable({ nodeTree = [] }: { nodeTree?: NodeTre
       setCourses((prev) =>
         prev.map((c) => (c.id === updated.id ? updated : c))
       );
+      pulse(updated.id);
     } catch (err: unknown) {
       setStatusError(
         err instanceof Error ? err.message : "Failed to update status"
@@ -265,14 +271,14 @@ export default function AdminCourseTable({ nodeTree = [] }: { nodeTree?: NodeTre
           <input
             type="text"
             value={search}
-            onChange={(e) => { setSearch(e.target.value); resetPage(); }}
+            onChange={(e) => morph(() => { setSearch(e.target.value); resetPage(); })}
             placeholder="Search courses…"
             className="w-full pl-9 pr-3 py-2.5 rounded-lg border border-border bg-surface text-sm text-foreground placeholder-foreground-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all"
           />
         </div>
         <select
           value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value as CourseStatus | "all"); resetPage(); }}
+          onChange={(e) => morph(() => { setStatusFilter(e.target.value as CourseStatus | "all"); resetPage(); })}
           className={`${selectClass} w-full sm:w-auto`}
         >
           <option value="all">All statuses</option>
@@ -282,7 +288,7 @@ export default function AdminCourseTable({ nodeTree = [] }: { nodeTree?: NodeTre
         </select>
         <select
           value={authorFilter}
-          onChange={(e) => { setAuthorFilter(e.target.value); resetPage(); }}
+          onChange={(e) => morph(() => { setAuthorFilter(e.target.value); resetPage(); })}
           className={`${selectClass} w-full sm:w-auto`}
         >
           <option value="all">All authors</option>
@@ -292,7 +298,7 @@ export default function AdminCourseTable({ nodeTree = [] }: { nodeTree?: NodeTre
         </select>
         <select
           value={nodeFilter}
-          onChange={(e) => { setNodeFilter(e.target.value); resetPage(); }}
+          onChange={(e) => morph(() => { setNodeFilter(e.target.value); resetPage(); })}
           className={`${selectClass} w-full sm:w-auto`}
         >
           <option value="all">All nodes</option>
@@ -385,7 +391,10 @@ export default function AdminCourseTable({ nodeTree = [] }: { nodeTree?: NodeTre
                       {group.courses.map((course) => (
                         <tr
                           key={course.id}
-                          className="hover:bg-surface-muted transition-colors"
+                          className={cn(
+                            "hover:bg-surface-muted transition-colors",
+                            pulseClass(course.id),
+                          )}
                         >
                           <td className="px-5 py-3">
                             <p className="font-medium text-foreground">

@@ -3,6 +3,7 @@
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useCallback } from "react";
 import { cn } from "@/lib/utils";
+import { useListMorph } from "@/hooks/useListMorph";
 
 export type EmailsTabKey = "invite" | "signature" | "iso-ack";
 
@@ -28,13 +29,14 @@ export function EmailsTabs() {
   const router = useRouter();
   const pathname = usePathname();
   const active = useActiveEmailsTab();
+  const morph = useListMorph();
 
   const switchTo = useCallback(
     (next: EmailsTabKey) => {
       const search = next === "invite" ? "" : `?tab=${next}`;
-      router.replace(`${pathname}${search}`, { scroll: false });
+      morph(() => router.replace(`${pathname}${search}`, { scroll: false }));
     },
-    [pathname, router],
+    [pathname, router, morph],
   );
 
   return (

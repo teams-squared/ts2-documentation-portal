@@ -30,12 +30,11 @@ describe("CourseCompletionModal", () => {
 
   it("renders stat tiles when open", () => {
     render(<CourseCompletionModal {...defaultProps} />);
-    // XP stat
-    expect(screen.getByText("+150")).toBeInTheDocument();
-    // Lessons stat
-    expect(screen.getByText("5")).toBeInTheDocument();
-    // Days stat
-    expect(screen.getByText("3")).toBeInTheDocument();
+    // AnimatedNumber splits each stat across multiple spans, so check tile
+    // text content directly via testid-less text aggregation.
+    expect(screen.getByText("XP").parentElement?.textContent).toContain("150");
+    expect(screen.getByText(/Lessons?/).parentElement?.textContent).toContain("5");
+    expect(screen.getByText(/Days?/).parentElement?.textContent).toContain("3");
   });
 
   it("renders course title as description", () => {

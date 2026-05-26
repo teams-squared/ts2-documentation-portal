@@ -3,9 +3,9 @@
 import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { FormButton } from "@/components/ui/FormButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -118,21 +118,15 @@ export default function LoginForm({
             />
           </div>
 
-          <Button
+          <FormButton
             type="submit"
             variant="secondary"
-            disabled={loading}
+            loading={loading}
+            pendingLabel="Signing in…"
             className="w-full"
           >
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                Signing in…
-              </>
-            ) : (
-              "Sign In"
-            )}
-          </Button>
+            Sign In
+          </FormButton>
         </form>
       )}
     </div>

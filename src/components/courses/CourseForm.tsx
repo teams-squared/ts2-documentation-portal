@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { NodeTreeSelect } from "./NodeTreeSelect";
+import { FormButton } from "@/components/ui/FormButton";
 import type { NodeTreeItem } from "./NodeTreeSelect";
 import type { CourseStatus } from "@/lib/types";
 
@@ -159,13 +160,14 @@ export function CourseForm({
       )}
 
       <div className="flex items-center gap-3 pt-2">
-        <button
+        <FormButton
           type="submit"
-          disabled={loading}
-          className="px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          loading={loading}
+          pendingLabel="Saving…"
+          className="shadow-sm"
         >
-          {loading ? "Saving..." : submitLabel}
-        </button>
+          {submitLabel}
+        </FormButton>
         <button
           type="button"
           onClick={onCancel}

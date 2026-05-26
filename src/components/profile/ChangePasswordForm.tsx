@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useToast } from "@/components/ui/ToastProvider";
+import { FormButton } from "@/components/ui/FormButton";
 
 interface ChangePasswordFormProps {
   /** True for SSO-only users who have no local password */
@@ -143,14 +144,17 @@ export function ChangePasswordForm({ isSsoOnly }: ChangePasswordFormProps) {
         </p>
       )}
       <div className="flex items-center gap-2">
-        <button
+        <FormButton
           type="submit"
-          disabled={saving}
-          className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          size="xs"
+          loading={saving}
+          success={success}
+          pendingLabel="Saving…"
+          successLabel="Saved"
           data-testid="save-password-button"
         >
-          {saving ? "Saving…" : "Save password"}
-        </button>
+          Save password
+        </FormButton>
         <button
           type="button"
           onClick={() => {

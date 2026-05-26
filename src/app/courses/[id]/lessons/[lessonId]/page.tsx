@@ -15,6 +15,7 @@ import { PolicyDocViewer } from "@/components/courses/PolicyDocViewer";
 import type { ReviewHistoryEntry, RevisionHistoryEntry } from "@/lib/policy-doc/types";
 import { CheckCircleIcon, ClockIcon, AlertTriangleIcon } from "@/components/icons";
 import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { RevealOnView } from "@/components/ui/RevealOnView";
 import { computeDeadline, getDeadlineStatus, formatDeadlineRelative } from "@/lib/deadlines";
 import type { DeadlineInfo } from "@/lib/deadlines";
 
@@ -275,7 +276,10 @@ export default async function LessonPage({
             policy_doc gets the full available width because the embedded PDF
             is the focus and benefits from every available pixel. */}
         <div className="overflow-x-auto">
-        <div
+        {/* RevealOnView keyed on lessonId re-mounts on lesson nav so the new
+            body fades in fresh rather than snapping. See design-system §9.3. */}
+        <RevealOnView
+          key={lessonId}
           className={`${
             lessonType === "policy_doc"
               ? "w-full"
@@ -391,7 +395,7 @@ export default async function LessonPage({
               alreadyCompleted={isCurrentLessonCompleted}
             />
           )}
-        </div>
+        </RevealOnView>
         </div>
         </div>
         <LessonFooter

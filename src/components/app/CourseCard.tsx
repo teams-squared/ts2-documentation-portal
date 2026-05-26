@@ -11,7 +11,7 @@ import { CourseThumbnail } from "@/components/courses/CourseThumbnail"
  * CourseCard — design-system Section 8.2.
  *
  * Anatomy (top → bottom):
- *   - 16:9 thumbnail (object-cover)
+ *   - 16:9 thumbnail (object-contain + padding inside tinted frame; see CourseThumbnail)
  *   - Category badge
  *   - Title (font-display, 2-line clamp)
  *   - Short description (optional, 2-line clamp)
