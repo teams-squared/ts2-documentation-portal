@@ -242,3 +242,155 @@ function parseGraphDate(s: string | undefined): Date {
   const d = new Date(s);
   return isNaN(d.getTime()) ? new Date() : d;
 }
+
+// ─── Public-library variant ─────────────────────────────────────────────────
+
+export interface SyncPublicIsoDocInput {
+  /** PublicIsoDoc row to re-sync. If omitted, treat (driveId, itemId) as a
+   *  new doc to be created on the public library. */
+  docId?: string;
+  driveId: string;
+  itemId: string;
+  /** Admin who triggered the sync. */
+  actorUserId: string;
+}
+
+export type SyncPublicIsoDocOutcome =
+  | {
+      status: "noop";
+      reason: "etag-unchanged";
+      doc: { id: string; sourceVersion: string; sourceETag: string };
+    }
+  | {
+      status: "synced";
+      created: boolean;
+      versionChanged: boolean;
+      doc: {
+        id: string;
+        sourceVersion: string;
+        sourceETag: string;
+        documentTitle: string;
+        documentCode: string | null;
+      };
+      warnings: string[];
+    };
+
+/**
+ * Sync a SharePoint policy doc into the public library (`PublicIsoDoc`).
+ *
+ * Mirrors `syncPolicyDoc` but writes to PublicIsoDoc instead of
+ * PolicyDocLesson, and never invalidates acknowledgements (the model has
+ * no ack pipeline — the public library is read-reference, not evidence).
+ *
+ * Idempotent: re-running without a SharePoint change is a one-roundtrip
+ * no-op via the eTag short-circuit.
+ */
+export async function syncPublicIsoDoc(
+  input: SyncPublicIsoDocInput,
+): Promise<SyncPublicIsoDocOutcome> {
+  const { docId, driveId, itemId, actorUserId } = input;
+
+  const meta = await getDriveItemMetadata(driveId, itemId);
+  const sourceETag = normalizeETag(meta.eTag);
+  if (!sourceETag) {
+    throw new Error(
+      `SharePoint item ${itemId} returned no eTag — cannot reliably sync.`,
+    );
+  }
+
+  // Locate existing row, either by id (re-sync) or by SP pointer (add path
+  // when the same SP file is already in the library — upgrade to an
+  // in-place re-sync rather than failing the unique constraint).
+  const existing = docId
+    ? await prisma.publicIsoDoc.findUnique({ where: { id: docId } })
+    : await prisma.publicIsoDoc.findUnique({
+        where: {
+          sharePointDriveId_sharePointItemId: {
+            sharePointDriveId: driveId,
+            sharePointItemId: itemId,
+          },
+        },
+      });
+
+  if (existing && existing.sourceETag === sourceETag) {
+    return {
+      status: "noop",
+      reason: "etag-unchanged",
+      doc: {
+        id: existing.id,
+        sourceVersion: existing.sourceVersion,
+        sourceETag: existing.sourceETag,
+      },
+    };
+  }
+
+  const fileBuffer = await fetchDriveItemBuffer(driveId, itemId);
+  const parsed = await parsePolicyDoc(fileBuffer, meta.name);
+
+  const versionChanged =
+    existing != null && existing.sourceVersion !== parsed.sourceVersion;
+
+  const upserted = existing
+    ? await prisma.publicIsoDoc.update({
+        where: { id: existing.id },
+        data: {
+          sharePointDriveId: driveId,
+          sharePointWebUrl: meta.webUrl ?? "",
+          documentTitle: parsed.documentTitle,
+          documentCode: parsed.documentCode,
+          sourceVersion: parsed.sourceVersion,
+          sourceETag,
+          sourceLastModified: parseGraphDate(meta.lastModifiedDateTime),
+          approver: parsed.approver,
+          approvedOn: parsed.approvedOn,
+          lastReviewedOn: parsed.lastReviewedOn,
+          reviewHistory: parsed.reviewHistory as unknown as object,
+          revisionHistory: parsed.revisionHistory as unknown as object,
+          lastSyncedAt: new Date(),
+          lastSyncedById: actorUserId,
+        },
+      })
+    : await prisma.publicIsoDoc.create({
+        data: {
+          sharePointDriveId: driveId,
+          sharePointItemId: meta.id,
+          sharePointWebUrl: meta.webUrl ?? "",
+          documentTitle: parsed.documentTitle,
+          documentCode: parsed.documentCode,
+          sourceVersion: parsed.sourceVersion,
+          sourceETag,
+          sourceLastModified: parseGraphDate(meta.lastModifiedDateTime),
+          approver: parsed.approver,
+          approvedOn: parsed.approvedOn,
+          lastReviewedOn: parsed.lastReviewedOn,
+          reviewHistory: parsed.reviewHistory as unknown as object,
+          revisionHistory: parsed.revisionHistory as unknown as object,
+          publishedById: actorUserId,
+          lastSyncedAt: new Date(),
+          lastSyncedById: actorUserId,
+        },
+      });
+
+  trackEvent(actorUserId, "public_iso_doc_synced", {
+    docId: upserted.id,
+    documentCode: parsed.documentCode,
+    sourceVersion: parsed.sourceVersion,
+    created: !existing,
+    versionChanged,
+    warningsCount: parsed.warnings.length,
+  });
+
+  return {
+    status: "synced",
+    created: !existing,
+    versionChanged,
+    doc: {
+      id: upserted.id,
+      sourceVersion: upserted.sourceVersion,
+      sourceETag: upserted.sourceETag,
+      documentTitle: upserted.documentTitle,
+      documentCode: upserted.documentCode,
+    },
+    warnings: parsed.warnings,
+  };
+}

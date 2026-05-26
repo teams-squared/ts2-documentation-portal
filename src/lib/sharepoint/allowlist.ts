@@ -2,13 +2,13 @@ import { prisma } from "@/lib/prisma";
 
 /**
  * Returns true when the given (driveId, itemId) pair is referenced by an
- * existing LMS lesson — either a POLICY_DOC lesson via PolicyDocLesson, or
- * a "document" / "html" lesson via the JSON SharePointDocumentRef stored
- * in Lesson.content.
+ * existing LMS surface — a POLICY_DOC lesson (PolicyDocLesson), a curated
+ * public-library doc (PublicIsoDoc), or a "document" / "html" lesson via the
+ * JSON SharePointDocumentRef stored in Lesson.content.
  *
  * Used to gate /api/sharepoint/files/[driveId]/[itemId] so an authenticated
  * user cannot proxy *arbitrary* SharePoint items by guessing IDs — only
- * items that have been deliberately linked into a lesson by an admin.
+ * items that have been deliberately curated by an admin.
  */
 export async function isAllowlistedSharePointItem(
   driveId: string,
@@ -25,6 +25,16 @@ export async function isAllowlistedSharePointItem(
     select: { id: true },
   });
   if (policyMatch) return true;
+
+  // Public ISO library (curated by admins at /admin/iso → Public library).
+  const publicMatch = await prisma.publicIsoDoc.findFirst({
+    where: {
+      sharePointDriveId: driveId,
+      sharePointItemId: itemId,
+    },
+    select: { id: true },
+  });
+  if (publicMatch) return true;
 
   // Slow path: "document" / "html" lesson types serialise a
   // SharePointDocumentRef into Lesson.content as JSON text. Use a substring

@@ -126,3 +126,41 @@ describe("PolicyDocViewer — dwell persistence", () => {
     window.removeEventListener(POLICY_ACK_EVENT, listener);
   });
 });
+
+describe('PolicyDocViewer — acknowledgementMode="none" (public library)', () => {
+  it("hides the dwell countdown and the attestation block", () => {
+    const { container, queryByLabelText } = render(
+      <PolicyDocViewer {...baseProps} acknowledgementMode="none" />,
+    );
+    // No "Acknowledge unlocks in M:SS" framing
+    expect(container.textContent).not.toContain("Acknowledge unlocks in");
+    // No attestation section / checkbox
+    expect(queryByLabelText("Acknowledgement")).toBeNull();
+    expect(container.querySelector('input[type="checkbox"]')).toBeNull();
+  });
+
+  it("does not touch sessionStorage and does not dispatch POLICY_ACK_EVENT", () => {
+    const listener = vi.fn();
+    window.addEventListener(POLICY_ACK_EVENT, listener);
+    render(<PolicyDocViewer {...baseProps} acknowledgementMode="none" />);
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(window.sessionStorage.getItem(STORAGE_KEY("lesson-1"))).toBeNull();
+    expect(listener).not.toHaveBeenCalled();
+    window.removeEventListener(POLICY_ACK_EVENT, listener);
+  });
+
+  it("suppresses the stale-ack banner even when lastAcknowledgement.version differs", () => {
+    const { container } = render(
+      <PolicyDocViewer
+        {...baseProps}
+        acknowledgementMode="none"
+        lastAcknowledgement={{ version: "0.9", acknowledgedAt: null }}
+      />,
+    );
+    expect(container.textContent).not.toContain(
+      "Policy updated since your last acknowledgement",
+    );
+  });
+});

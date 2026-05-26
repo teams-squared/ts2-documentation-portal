@@ -5,11 +5,12 @@ import { useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useListMorph } from "@/hooks/useListMorph";
 
-export type IsoTabKey = "acks" | "coverage";
+export type IsoTabKey = "acks" | "coverage" | "library";
 
 const TABS: { key: IsoTabKey; label: string }[] = [
   { key: "acks", label: "Acknowledgements" },
   { key: "coverage", label: "Coverage" },
+  { key: "library", label: "Public library" },
 ];
 
 /** Returns the active tab from the URL (?tab=...) with safe fallback. */

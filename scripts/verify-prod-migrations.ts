@@ -153,6 +153,13 @@ async function main() {
       'Table "ManualReminderLog" should exist',
     ),
   );
+  results.push(
+    await check(
+      "20260526000000_add_public_iso_doc",
+      () => tableExists("PublicIsoDoc"),
+      'Table "PublicIsoDoc" should exist',
+    ),
+  );
 
   // Print
   let pad = 0;

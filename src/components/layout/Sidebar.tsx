@@ -8,6 +8,7 @@ import {
   Home,
   GraduationCap,
   Shield,
+  ShieldCheck,
   BookOpenCheck,
   PanelLeftClose,
   PanelLeftOpen,
@@ -49,6 +50,7 @@ interface NavItem {
 const BASE_NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Home", icon: Home },
   { href: "/courses", label: "Courses", icon: GraduationCap },
+  { href: "/policies", label: "Policies", icon: ShieldCheck },
 ];
 
 const ADMIN_NAV_ITEM: NavItem = {

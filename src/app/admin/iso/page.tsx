@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { IsoAckLog } from "@/components/admin/IsoAckLog";
 import { IsoCoverage } from "@/components/admin/IsoCoverage";
+import { PublicIsoLibraryManager } from "@/components/admin/PublicIsoLibraryManager";
 import { IsoTabs, IsoTabPanel } from "@/components/admin/IsoTabs";
 
 export const dynamic = "force-dynamic";
@@ -57,6 +58,20 @@ export default async function AdminIsoPage() {
           re-ack the new one.
         </p>
         <IsoCoverage />
+      </IsoTabPanel>
+
+      <IsoTabPanel tab="library">
+        <h2 className="text-sm font-semibold text-foreground mb-1">
+          Public ISO doc library
+        </h2>
+        <p className="text-sm text-foreground-muted mb-4">
+          Documents listed here are visible to every logged-in LMS user at{" "}
+          <span className="font-medium">/policies</span>, regardless of
+          enrollment. Use this for org-wide reference material (ISO policies,
+          handbooks, public notices) that doesn&apos;t require an
+          acknowledgement audit trail.
+        </p>
+        <PublicIsoLibraryManager />
       </IsoTabPanel>
     </div>
   );
