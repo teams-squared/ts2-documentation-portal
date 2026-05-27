@@ -107,11 +107,11 @@ describe("ModuleManager — existing modules", () => {
     expect(screen.getByText("Video")).toBeInTheDocument();
   });
 
-  it("renders the move-up button per lesson when expanded", () => {
+  it("renders a drag handle per lesson when expanded", () => {
     render(<ModuleManager {...oneModule} />);
     fireEvent.click(screen.getByText(/Module 1/));
-    expect(screen.getByLabelText("Move lesson Intro up")).toBeInTheDocument();
-    expect(screen.getByLabelText("Move lesson Video up")).toBeInTheDocument();
+    expect(screen.getByLabelText("Drag lesson Intro")).toBeInTheDocument();
+    expect(screen.getByLabelText("Drag lesson Video")).toBeInTheDocument();
   });
 
   it("renders + Add lesson when a module is expanded", () => {

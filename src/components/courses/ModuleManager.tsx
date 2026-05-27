@@ -7,6 +7,7 @@ import { QuizBuilder } from "./QuizBuilder";
 import { PolicyDocLessonEditor } from "./PolicyDocLessonEditor";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Button } from "@/components/ui/button";
+import { DragHandle, SortableItem, SortableList } from "@/components/ui/Sortable";
 import type { LessonType } from "@/lib/types";
 import type { SharePointDocumentRef } from "@/lib/sharepoint/types";
 import { parseLinkContent, serializeLinkContent } from "@/lib/lesson-link";
@@ -216,19 +217,11 @@ export function ModuleManager({
 
   // ─── Module reorder ──────────────────────────────────────────────────────────
 
-  const moveModule = async (moduleId: string, direction: "up" | "down") => {
+  const handleModulesReorder = async (next: Module[]) => {
     if (reordering) return;
-    const idx = modules.findIndex((m) => m.id === moduleId);
-    if (idx === -1) return;
-    const swapWith = direction === "up" ? idx - 1 : idx + 1;
-    if (swapWith < 0 || swapWith >= modules.length) return;
-
     const previous = modules;
-    const next = [...modules];
-    [next[idx], next[swapWith]] = [next[swapWith], next[idx]];
     setModules(next);
     setReordering(true);
-
     try {
       await apiFetch(`/api/courses/${courseId}/modules/reorder`, {
         method: "POST",
@@ -305,22 +298,9 @@ export function ModuleManager({
 
   // ─── Lesson reorder ──────────────────────────────────────────────────────────
 
-  const moveLesson = async (
-    moduleId: string,
-    lessonId: string,
-    direction: "up" | "down",
-  ) => {
+  const handleLessonsReorder = async (moduleId: string, nextLessons: Lesson[]) => {
     if (reordering) return;
-    const mod = modules.find((m) => m.id === moduleId);
-    if (!mod) return;
-    const idx = mod.lessons.findIndex((l) => l.id === lessonId);
-    if (idx === -1) return;
-    const swapWith = direction === "up" ? idx - 1 : idx + 1;
-    if (swapWith < 0 || swapWith >= mod.lessons.length) return;
-
     const previous = modules;
-    const nextLessons = [...mod.lessons];
-    [nextLessons[idx], nextLessons[swapWith]] = [nextLessons[swapWith], nextLessons[idx]];
     const next = modules.map((m) =>
       m.id === moduleId ? { ...m, lessons: nextLessons } : m,
     );
@@ -494,13 +474,18 @@ export function ModuleManager({
           </div>
         )}
 
-        <div className="space-y-3">
-          {modules.map((module, moduleIdx) => {
-            const isFirstModule = moduleIdx === 0;
-            const isLastModule = moduleIdx === modules.length - 1;
-            return (
+        <SortableList
+          items={modules}
+          onReorder={handleModulesReorder}
+          disabled={reordering}
+          className="space-y-3"
+        >
+          {(module) => (
+            <SortableItem key={module.id} id={module.id} disabled={reordering}>
+              {({ setNodeRef, style, dragHandleProps: moduleDragHandleProps }) => (
               <div
-                key={module.id}
+                ref={setNodeRef}
+                style={style}
                 className="rounded-lg border border-border bg-card overflow-hidden"
               >
                 {/* Module header */}
@@ -511,6 +496,10 @@ export function ModuleManager({
                     toggleModule(module.id);
                   }}
                 >
+                  <DragHandle
+                    dragHandleProps={moduleDragHandleProps}
+                    label={`Drag module ${module.title}`}
+                  />
                   <span className="text-foreground-subtle text-xs">
                     {expandedModules.has(module.id) ? "▼" : "▶"}
                   </span>
@@ -573,34 +562,6 @@ export function ModuleManager({
                     {module.lessons.length} lesson{module.lessons.length !== 1 ? "s" : ""}
                   </span>
 
-                  {/* Reorder buttons */}
-                  <div className="flex items-center gap-0.5 ml-1">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void moveModule(module.id, "up");
-                      }}
-                      disabled={isFirstModule || reordering}
-                      className="rounded p-1 text-foreground-subtle hover:text-foreground hover:bg-surface-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                      aria-label={`Move module ${module.title} up`}
-                      title="Move up"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void moveModule(module.id, "down");
-                      }}
-                      disabled={isLastModule || reordering}
-                      className="rounded p-1 text-foreground-subtle hover:text-foreground hover:bg-surface-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                      aria-label={`Move module ${module.title} down`}
-                      title="Move down"
-                    >
-                      ↓
-                    </button>
-                  </div>
-
                   {editingModuleId !== module.id && (
                     <Button
                       variant="ghost"
@@ -635,41 +596,29 @@ export function ModuleManager({
 
                 {/* Module lessons */}
                 {expandedModules.has(module.id) && (
-                  <div className="border-t border-border px-4 py-3 space-y-2">
-                    {module.lessons.map((lesson, lessonIdx) => {
-                      const isFirstLesson = lessonIdx === 0;
-                      const isLastLesson = lessonIdx === module.lessons.length - 1;
-                      return (
-                        <div key={lesson.id}>
+                  <div className="border-t border-border px-4 py-3">
+                    <SortableList
+                      items={module.lessons}
+                      onReorder={(next) => void handleLessonsReorder(module.id, next)}
+                      disabled={reordering}
+                      className="space-y-2"
+                    >
+                      {(lesson) => (
+                        <SortableItem key={lesson.id} id={lesson.id} disabled={reordering}>
+                          {({ setNodeRef: setLessonRef, style: lessonStyle, dragHandleProps: lessonDragHandleProps }) => (
+                        <div ref={setLessonRef} style={lessonStyle}>
                           <div className="flex items-center gap-2 rounded-lg px-3 py-2 bg-surface-muted">
+                            <DragHandle
+                              dragHandleProps={lessonDragHandleProps}
+                              label={`Drag lesson ${lesson.title}`}
+                              size="sm"
+                            />
                             <span className="text-xs text-foreground-subtle capitalize w-16 shrink-0">
                               {lesson.type}
                             </span>
                             <p className="text-sm text-foreground flex-1 truncate">
                               {lesson.title}
                             </p>
-
-                            {/* Reorder buttons */}
-                            <div className="flex items-center gap-0.5">
-                              <button
-                                onClick={() => void moveLesson(module.id, lesson.id, "up")}
-                                disabled={isFirstLesson || reordering}
-                                className="rounded p-0.5 text-foreground-subtle hover:text-foreground hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                aria-label={`Move lesson ${lesson.title} up`}
-                                title="Move up"
-                              >
-                                ↑
-                              </button>
-                              <button
-                                onClick={() => void moveLesson(module.id, lesson.id, "down")}
-                                disabled={isLastLesson || reordering}
-                                className="rounded p-0.5 text-foreground-subtle hover:text-foreground hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                aria-label={`Move lesson ${lesson.title} down`}
-                                title="Move down"
-                              >
-                                ↓
-                              </button>
-                            </div>
 
                             {lesson.type === "quiz" && (quizDataByLessonId[lesson.id]?.questions.length ?? 0) === 0 && (
                               <span
@@ -725,8 +674,10 @@ export function ModuleManager({
                             );
                           })()}
                         </div>
-                      );
-                    })}
+                          )}
+                        </SortableItem>
+                      )}
+                    </SortableList>
 
                     {/* Add lesson */}
                     {addLessonModuleId === module.id ? (
@@ -808,9 +759,10 @@ export function ModuleManager({
                   </div>
                 )}
               </div>
-            );
-          })}
-        </div>
+              )}
+            </SortableItem>
+          )}
+        </SortableList>
 
         {/* Add module form */}
         {showAddModule && (

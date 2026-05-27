@@ -21,7 +21,9 @@ export default async function PolicyDocPage({
 
   const { id } = await params;
   const doc = await prisma.publicIsoDoc.findUnique({ where: { id } });
-  if (!doc) notFound();
+  // Hidden docs 404 from the reader too — withdrawn means withdrawn, even
+  // for users who bookmarked the direct link.
+  if (!doc || doc.isHidden) notFound();
 
   // Fire-and-forget audit row. Admins use this to see which public docs
   // are actually being read. Not used for ack evidence — that pipeline

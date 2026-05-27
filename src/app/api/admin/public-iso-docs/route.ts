@@ -37,6 +37,7 @@ export async function GET() {
       approvedOn: true,
       lastReviewedOn: true,
       sortOrder: true,
+      isHidden: true,
       publishedAt: true,
       lastSyncedAt: true,
       lastSyncedBy: { select: { name: true, email: true } },
