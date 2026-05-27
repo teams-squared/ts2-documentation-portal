@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 const PatchBody = z.object({
   sortOrder: z.number().int().optional(),
+  isHidden: z.boolean().optional(),
 });
 
 type Params = { params: Promise<{ id: string }> };
@@ -42,10 +43,19 @@ export async function PATCH(request: Request, { params }: Params) {
       ...(parsed.data.sortOrder !== undefined && {
         sortOrder: parsed.data.sortOrder,
       }),
+      ...(parsed.data.isHidden !== undefined && {
+        isHidden: parsed.data.isHidden,
+      }),
     },
   });
 
-  return NextResponse.json({ doc: { id: updated.id, sortOrder: updated.sortOrder } });
+  return NextResponse.json({
+    doc: {
+      id: updated.id,
+      sortOrder: updated.sortOrder,
+      isHidden: updated.isHidden,
+    },
+  });
 }
 
 export async function DELETE(_request: Request, { params }: Params) {

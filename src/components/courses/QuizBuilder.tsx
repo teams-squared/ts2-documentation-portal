@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { DragHandle, SortableItem, SortableList } from "@/components/ui/Sortable";
 
 interface QuizOption {
   id: string;
@@ -268,26 +269,25 @@ export function QuizBuilder({
 
   // ── Reorder ───────────────────────────────────────────────────────────────
 
-  const moveQuestion = async (idx: number, direction: "up" | "down") => {
-    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
-    if (swapIdx < 0 || swapIdx >= questions.length) return;
-
-    const reordered = [...questions];
-    [reordered[idx], reordered[swapIdx]] = [reordered[swapIdx], reordered[idx]];
-
+  const handleReorder = async (next: QuizQuestion[]) => {
+    const previous = questions;
+    setQuestions(next);
     setReordering(true);
     try {
       const res = await fetch(`${questionsApiBase}/reorder`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderedIds: reordered.map((q) => q.id) }),
+        body: JSON.stringify({ orderedIds: next.map((q) => q.id) }),
       });
-
       if (res.ok) {
         const updated = (await res.json()) as QuizQuestion[];
         setQuestions(updated);
         router.refresh();
+      } else {
+        setQuestions(previous);
       }
+    } catch {
+      setQuestions(previous);
     } finally {
       setReordering(false);
     }
@@ -363,11 +363,19 @@ export function QuizBuilder({
         </p>
       )}
 
-      <div className="mb-4 space-y-3">
-        {questions.map((question, idx) => (
+      <SortableList
+        items={questions}
+        onReorder={handleReorder}
+        disabled={reordering}
+        className="mb-4 space-y-3"
+      >
+        {(question, idx) => (
+          <SortableItem key={question.id} id={question.id} disabled={reordering}>
+            {({ setNodeRef, style, dragHandleProps }) => (
           <div
-            key={question.id}
-            className="rounded-lg border border-border p-4"
+            ref={setNodeRef}
+            style={style}
+            className="rounded-lg border border-border bg-surface p-4"
           >
             {editingQuestionId === question.id ? (
               /* Inline edit form */
@@ -443,27 +451,18 @@ export function QuizBuilder({
               /* Read-only view */
               <>
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-medium text-foreground">
-                    {idx + 1}. {question.text}
-                  </p>
+                  <div className="flex items-start gap-2 flex-1">
+                    <DragHandle
+                      dragHandleProps={dragHandleProps}
+                      label={`Drag question ${idx + 1}`}
+                      size="sm"
+                      className="mt-0.5"
+                    />
+                    <p className="text-sm font-medium text-foreground">
+                      {idx + 1}. {question.text}
+                    </p>
+                  </div>
                   <div className="flex shrink-0 items-center gap-1">
-                    {/* Reorder buttons */}
-                    <button
-                      onClick={() => moveQuestion(idx, "up")}
-                      disabled={idx === 0 || reordering}
-                      aria-label={`Move question ${idx + 1} up`}
-                      className="px-1 text-xs text-foreground-subtle transition-colors hover:text-foreground disabled:opacity-30"
-                    >
-                      ▲
-                    </button>
-                    <button
-                      onClick={() => moveQuestion(idx, "down")}
-                      disabled={idx === questions.length - 1 || reordering}
-                      aria-label={`Move question ${idx + 1} down`}
-                      className="px-1 text-xs text-foreground-subtle transition-colors hover:text-foreground disabled:opacity-30"
-                    >
-                      ▼
-                    </button>
                     <button
                       onClick={() => startEdit(question)}
                       aria-label={`Edit question ${idx + 1}`}
@@ -499,8 +498,10 @@ export function QuizBuilder({
               </>
             )}
           </div>
-        ))}
-      </div>
+            )}
+          </SortableItem>
+        )}
+      </SortableList>
 
       {/* Add question form */}
       {showForm && (

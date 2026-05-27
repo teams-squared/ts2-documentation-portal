@@ -270,49 +270,10 @@ describe("QuizBuilder", () => {
 
   // ── Reordering ───────────────────────────────────────────────────────────
 
-  it("shows up/down buttons for each question", () => {
+  it("shows a drag handle for each question", () => {
     render(<QuizBuilder {...defaultProps} />);
-    const upButtons = screen.getAllByRole("button", { name: /move question.*up/i });
-    const downButtons = screen.getAllByRole("button", { name: /move question.*down/i });
-    expect(upButtons).toHaveLength(2);
-    expect(downButtons).toHaveLength(2);
-  });
-
-  it("disables up button for first question", () => {
-    render(<QuizBuilder {...defaultProps} />);
-    const upBtn = screen.getByRole("button", { name: /move question 1 up/i });
-    expect(upBtn).toBeDisabled();
-  });
-
-  it("disables down button for last question", () => {
-    render(<QuizBuilder {...defaultProps} />);
-    const downBtn = screen.getByRole("button", { name: /move question 2 down/i });
-    expect(downBtn).toBeDisabled();
-  });
-
-  it("calls reorder endpoint when up button clicked", async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => [
-        { id: "q2", text: "What is 3+3?", order: 1, options: [] },
-        { id: "q1", text: "What is 2+2?", order: 2, options: [] },
-      ],
-    });
-    vi.stubGlobal("fetch", mockFetch);
-
-    render(<QuizBuilder {...defaultProps} />);
-    const upBtn = screen.getByRole("button", { name: /move question 2 up/i });
-    fireEvent.click(upBtn);
-
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith(
-        "/api/courses/c1/modules/m1/lessons/l1/quiz/questions/reorder",
-        expect.objectContaining({ method: "POST" }),
-      );
-    });
-    // Verify orderedIds has q2 first
-    const callBody = JSON.parse(mockFetch.mock.calls[0][1].body as string) as { orderedIds: string[] };
-    expect(callBody.orderedIds).toEqual(["q2", "q1"]);
+    const handles = screen.getAllByRole("button", { name: /drag question/i });
+    expect(handles).toHaveLength(2);
   });
 
   it("shows error when submitting form with empty question text", async () => {

@@ -215,6 +215,7 @@ model PublicIsoDoc {
 
   // Display
   sortOrder           Int      @default(0)
+  isHidden            Boolean  @default(false)
 
   // Provenance
   publishedAt         DateTime @default(now())

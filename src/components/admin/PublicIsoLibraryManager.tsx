@@ -9,8 +9,10 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { SharePointFilePicker } from "@/components/courses/SharePointFilePicker";
 import type { SharePointDocumentRef } from "@/lib/sharepoint/types";
+import { DragHandle, SortableItem, SortableList } from "@/components/ui/Sortable";
 
 interface PublicIsoDocRow {
   id: string;
@@ -25,6 +27,7 @@ interface PublicIsoDocRow {
   approvedOn: string | null;
   lastReviewedOn: string | null;
   sortOrder: number;
+  isHidden: boolean;
   publishedAt: string;
   lastSyncedAt: string;
   lastSyncedBy: { name: string | null; email: string } | null;
@@ -226,36 +229,55 @@ export function PublicIsoLibraryManager() {
     [refresh],
   );
 
-  const move = useCallback(
-    async (id: string, direction: -1 | 1) => {
+  // Bulk reorder driven by the drag-and-drop list. We assign each row a
+  // fresh sortOrder index and PATCH every row whose value changed; PATCH
+  // calls are fire-in-parallel since the endpoint is idempotent.
+  const reorder = useCallback(
+    async (next: PublicIsoDocRow[]) => {
       if (!rows) return;
-      const idx = rows.findIndex((r) => r.id === id);
-      const swapIdx = idx + direction;
-      if (idx < 0 || swapIdx < 0 || swapIdx >= rows.length) return;
-      const a = rows[idx];
-      const b = rows[swapIdx];
-      // Swap the two rows' sortOrder values. If they're equal (e.g. all
-      // defaults), bump the target one above/below the other.
-      const aNext = b.sortOrder === a.sortOrder ? a.sortOrder + direction : b.sortOrder;
-      const bNext = b.sortOrder === a.sortOrder ? a.sortOrder : a.sortOrder;
-
-      setBusyId(id);
+      const previous = rows;
+      const renumbered = next.map((r, i) => ({ ...r, sortOrder: i }));
+      setRows(renumbered);
       try {
-        await Promise.all([
-          fetch(`/api/admin/public-iso-docs/${a.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ sortOrder: aNext }),
-          }),
-          fetch(`/api/admin/public-iso-docs/${b.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ sortOrder: bNext }),
-          }),
-        ]);
+        const changed = renumbered.filter((r, i) => previous[i]?.id !== r.id);
+        await Promise.all(
+          changed.map((r) =>
+            fetch(`/api/admin/public-iso-docs/${r.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sortOrder: r.sortOrder }),
+            }),
+          ),
+        );
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Reorder failed");
+        setRows(previous);
+      }
+    },
+    [rows],
+  );
+
+  const toggleHidden = useCallback(
+    async (id: string) => {
+      if (!rows) return;
+      const row = rows.find((r) => r.id === id);
+      if (!row) return;
+      const next = !row.isHidden;
+      // Optimistic flip
+      setRows(rows.map((r) => (r.id === id ? { ...r, isHidden: next } : r)));
+      setMessage(null);
+      setError(null);
+      try {
+        const res = await fetch(`/api/admin/public-iso-docs/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isHidden: next }),
+        });
+        if (!res.ok) throw new Error(`Update failed (${res.status})`);
+        setMessage(next ? "Hidden from /policies." : "Visible on /policies.");
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Update failed");
         await refresh();
-      } finally {
-        setBusyId(null);
       }
     },
     [rows, refresh],
@@ -375,78 +397,95 @@ export function PublicIsoLibraryManager() {
           No documents in the public library yet.
         </div>
       ) : (
-        <ul className="divide-y divide-border rounded-lg border border-border bg-surface">
-          {rows.map((row, idx) => (
-            <li key={row.id} className="flex items-start gap-3 p-3">
-              <div className="flex flex-col gap-1 pt-0.5">
-                <button
-                  type="button"
-                  onClick={() => void move(row.id, -1)}
-                  disabled={idx === 0 || busyId === row.id}
-                  aria-label="Move up"
-                  className="rounded border border-border px-1.5 text-xs text-foreground-muted hover:bg-surface-muted disabled:opacity-30"
+        <SortableList
+          items={rows}
+          onReorder={(next) => void reorder(next)}
+          className="divide-y divide-border rounded-lg border border-border bg-surface"
+        >
+          {(row) => (
+            <SortableItem key={row.id} id={row.id}>
+              {({ setNodeRef, style, dragHandleProps }) => (
+                <div
+                  ref={setNodeRef}
+                  style={style}
+                  className={`flex items-start gap-3 bg-surface p-3 ${row.isHidden ? "opacity-60" : ""}`}
                 >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void move(row.id, 1)}
-                  disabled={idx === rows.length - 1 || busyId === row.id}
-                  aria-label="Move down"
-                  className="rounded border border-border px-1.5 text-xs text-foreground-muted hover:bg-surface-muted disabled:opacity-30"
-                >
-                  ↓
-                </button>
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-foreground truncate">
-                  {row.documentTitle}
-                </p>
-                <p className="text-xs text-foreground-muted">
-                  {row.documentCode ? `${row.documentCode} · ` : ""}
-                  v{row.sourceVersion}
-                  {row.approver ? ` · approved by ${row.approver}` : ""}
-                </p>
-                <p className="text-xs text-foreground-subtle mt-1">
-                  Last synced {formatRel(row.lastSyncedAt)}
-                  {row.lastSyncedBy?.name ? ` by ${row.lastSyncedBy.name}` : ""}
-                  {" · "}
-                  {row.viewCount} view{row.viewCount === 1 ? "" : "s"}
-                  {row.distinctViewers > 0
-                    ? ` from ${row.distinctViewers} ${row.distinctViewers === 1 ? "person" : "people"}`
-                    : ""}
-                  {" · "}
-                  <a
-                    href={row.sharePointWebUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline"
-                  >
-                    Open in SharePoint ↗
-                  </a>
-                </p>
-              </div>
-              <div className="flex flex-shrink-0 items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => void resync(row.id)}
-                  disabled={busyId === row.id}
-                  className="rounded-md border border-border text-xs text-foreground px-2.5 py-1 hover:bg-surface-muted disabled:opacity-50"
-                >
-                  {busyId === row.id ? "…" : "Re-sync"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void remove(row.id)}
-                  disabled={busyId === row.id}
-                  className="rounded-md border border-border text-xs text-danger px-2.5 py-1 hover:bg-danger-subtle disabled:opacity-50"
-                >
-                  Remove
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+                  <DragHandle
+                    dragHandleProps={dragHandleProps}
+                    label={`Drag ${row.documentTitle}`}
+                    size="sm"
+                    className="mt-0.5"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {row.documentTitle}
+                      {row.isHidden && (
+                        <span className="ml-2 inline-flex items-center rounded-md border border-border bg-surface-muted px-1.5 py-0.5 text-[10px] font-medium text-foreground-muted">
+                          Hidden
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-foreground-muted">
+                      {row.documentCode ? `${row.documentCode} · ` : ""}
+                      v{row.sourceVersion}
+                      {row.approver ? ` · approved by ${row.approver}` : ""}
+                    </p>
+                    <p className="text-xs text-foreground-subtle mt-1">
+                      Last synced {formatRel(row.lastSyncedAt)}
+                      {row.lastSyncedBy?.name ? ` by ${row.lastSyncedBy.name}` : ""}
+                      {" · "}
+                      {row.viewCount} view{row.viewCount === 1 ? "" : "s"}
+                      {row.distinctViewers > 0
+                        ? ` from ${row.distinctViewers} ${row.distinctViewers === 1 ? "person" : "people"}`
+                        : ""}
+                      {" · "}
+                      <a
+                        href={row.sharePointWebUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        Open in SharePoint ↗
+                      </a>
+                    </p>
+                  </div>
+                  <div className="flex flex-shrink-0 items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void toggleHidden(row.id)}
+                      disabled={busyId === row.id}
+                      aria-label={row.isHidden ? `Unhide ${row.documentTitle}` : `Hide ${row.documentTitle}`}
+                      title={row.isHidden ? "Unhide — show on /policies" : "Hide from /policies"}
+                      className="rounded-md border border-border p-1.5 text-foreground-muted hover:bg-surface-muted hover:text-foreground disabled:opacity-50"
+                    >
+                      {row.isHidden ? (
+                        <EyeOff className="h-3.5 w-3.5" aria-hidden="true" />
+                      ) : (
+                        <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void resync(row.id)}
+                      disabled={busyId === row.id}
+                      className="rounded-md border border-border text-xs text-foreground px-2.5 py-1 hover:bg-surface-muted disabled:opacity-50"
+                    >
+                      {busyId === row.id ? "…" : "Re-sync"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void remove(row.id)}
+                      disabled={busyId === row.id}
+                      className="rounded-md border border-border text-xs text-danger px-2.5 py-1 hover:bg-danger-subtle disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              )}
+            </SortableItem>
+          )}
+        </SortableList>
       )}
 
       <SharePointFilePicker
