@@ -682,8 +682,8 @@ export function ModuleManager({
                     {/* Add lesson */}
                     {addLessonModuleId === module.id ? (
                       <div className="mt-2 rounded-lg border border-border bg-surface/40 p-3">
-                        <div className="flex flex-wrap items-end gap-3">
-                          <div className="flex-1 min-w-[200px]">
+                        <div className="flex flex-col md:flex-row md:flex-wrap md:items-end gap-3">
+                          <div className="flex-1 min-w-0 md:min-w-[200px]">
                             <label
                               htmlFor={`new-lesson-title-${module.id}`}
                               className="block text-xs font-medium text-foreground-muted mb-1"
@@ -699,7 +699,7 @@ export function ModuleManager({
                               className="w-full rounded-lg border border-border bg-background text-sm px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             />
                           </div>
-                          <div>
+                          <div className="w-full md:w-auto">
                             <label
                               htmlFor={`new-lesson-type-${module.id}`}
                               className="block text-xs font-medium text-foreground-muted mb-1"
@@ -710,7 +710,7 @@ export function ModuleManager({
                               id={`new-lesson-type-${module.id}`}
                               value={newLessonType}
                               onChange={(e) => setNewLessonType(e.target.value as LessonType)}
-                              className="rounded-lg border border-border bg-background text-sm px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              className="w-full md:w-auto rounded-lg border border-border bg-background text-sm px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             >
                               <option value="text">Text: written content</option>
                               <option value="video">Video: SharePoint clip or URL</option>
@@ -803,8 +803,8 @@ export function ModuleManager({
 
       {/* Lesson edit modal */}
       {editingLesson && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-foreground/50 backdrop-blur-sm">
-          <div className="w-full max-w-2xl max-h-[90dvh] overflow-y-auto bg-background rounded-lg shadow-lg border border-border p-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-foreground/50 backdrop-blur-sm">
+          <div className="w-full max-w-2xl max-h-[90dvh] overflow-y-auto bg-background rounded-lg shadow-lg border border-border p-4 sm:p-6">
             <h3 className="text-base font-semibold text-foreground">
               Edit lesson
             </h3>
@@ -834,7 +834,7 @@ export function ModuleManager({
                     setEditContent("");
                   }}
                   disabled={editingLesson.type === "quiz"}
-                  className="rounded-lg border border-border bg-surface text-sm px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full sm:w-auto rounded-lg border border-border bg-surface text-sm px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
                   aria-label="Edit lesson type"
                 >
                   <option value="text">Text</option>
@@ -870,7 +870,7 @@ export function ModuleManager({
                         : "Document"}
                   </label>
                   {editType === "video" && (
-                    <div className="mb-2 inline-flex rounded-lg border border-border p-0.5 text-xs">
+                    <div className="mb-2 flex flex-col sm:flex-row gap-1 sm:gap-0 sm:inline-flex rounded-lg border border-border p-0.5 text-xs">
                       <button
                         type="button"
                         onClick={() => setVideoSource("sharepoint")}

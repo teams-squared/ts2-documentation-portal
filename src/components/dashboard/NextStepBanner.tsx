@@ -50,7 +50,7 @@ export function NextStepBanner({
             : "border border-border hover:border-border-strong",
         )}
       >
-        <div className="relative flex items-center gap-4 sm:gap-6">
+        <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex items-center gap-2">
               {isOverdue && (
@@ -98,7 +98,7 @@ export function NextStepBanner({
               </span>
             </div>
           </div>
-          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors group-hover:bg-primary-hover sm:px-5">
+          <span className="inline-flex w-full sm:w-auto shrink-0 justify-center items-center gap-1.5 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors group-hover:bg-primary-hover sm:px-5">
             Continue
             <ChevronRight
               className="h-4 w-4 transition-transform group-hover:translate-x-0.5"

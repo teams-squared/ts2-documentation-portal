@@ -223,7 +223,7 @@ export function UserDetailManager({
       {/* Role card */}
       <div className="rounded-lg border border-border bg-card p-6">
         <h3 className="text-sm font-semibold text-foreground mb-4">Role</h3>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <select
             value={role}
             onChange={(e) => {
@@ -231,7 +231,7 @@ export function UserDetailManager({
               setRoleSuccess(false);
             }}
             aria-label="User role"
-            className="px-3 py-2 rounded-lg border border-border bg-surface text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="w-full sm:w-auto px-3 py-2 rounded-lg border border-border bg-surface text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {(["admin", "course_manager", "employee"] as Role[]).map((r) => (
               <option key={r} value={r}>{ROLE_LABELS[r]}</option>
@@ -259,12 +259,12 @@ export function UserDetailManager({
           Clearances
         </h3>
 
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
           <select
             value={selectedClearance}
             onChange={(e) => setSelectedClearance(e.target.value)}
             aria-label="Select clearance to grant"
-            className="flex-1 px-3 py-2 rounded-lg border border-border bg-surface text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="w-full sm:flex-1 px-3 py-2 rounded-lg border border-border bg-surface text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <option value="">Select a clearance…</option>
             {availClearances.map((c) => (
@@ -334,7 +334,7 @@ export function UserDetailManager({
               return (
                 <li
                   key={e.courseId}
-                  className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
+                  className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4 py-3 first:pt-0 last:pb-0"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-foreground">

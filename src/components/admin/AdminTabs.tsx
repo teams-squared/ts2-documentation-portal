@@ -24,7 +24,7 @@ export function AdminTabs() {
   const visibleTabs = TABS.filter((t) => isAdmin || !t.adminOnly);
 
   return (
-    <nav className="flex gap-1 mb-6 border-b border-border">
+    <nav className="flex gap-1 mb-6 border-b border-border overflow-x-auto">
       {visibleTabs.map((tab) => {
         const isActive = tab.exact
           ? pathname === tab.href
@@ -35,7 +35,7 @@ export function AdminTabs() {
             key={tab.href}
             href={tab.href}
             className={cn(
-              "px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm",
+              "px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm shrink-0 whitespace-nowrap",
               isActive
                 ? "border-primary text-primary"
                 : "border-transparent text-foreground-muted hover:text-foreground",

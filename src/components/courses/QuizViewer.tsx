@@ -284,7 +284,7 @@ export function QuizViewer({
               {question.options.map((option) => (
                 <label
                   key={option.id}
-                  className={`flex cursor-pointer items-center gap-3 rounded-md border px-4 py-3 transition-colors ${
+                  className={`flex cursor-pointer items-start gap-3 rounded-md border px-4 py-3 transition-colors ${
                     selectedAnswers[question.id] === option.id
                       ? "border-primary bg-primary-subtle"
                       : "border-border hover:bg-surface-muted"
@@ -298,7 +298,7 @@ export function QuizViewer({
                     onChange={() => handleSelect(question.id, option.id)}
                     className="text-primary focus-visible:ring-2 focus-visible:ring-ring"
                   />
-                  <span className="text-sm text-foreground">
+                  <span className="flex-1 text-sm text-foreground">
                     {option.text}
                   </span>
                 </label>

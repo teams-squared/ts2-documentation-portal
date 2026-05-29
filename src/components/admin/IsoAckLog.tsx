@@ -130,7 +130,7 @@ export function IsoAckLog() {
     <div className="space-y-4">
       {/* Filter row */}
       <div className="flex flex-wrap items-end gap-3 px-4 py-3 rounded-lg border border-border bg-surface-muted">
-        <div>
+        <div className="w-full sm:w-auto">
           <label
             htmlFor="iso-ack-from"
             className="block text-xs font-medium text-foreground-muted mb-1"
@@ -142,10 +142,10 @@ export function IsoAckLog() {
             type="date"
             value={from}
             onChange={(e) => onFilterChange({ from: e.target.value })}
-            className="px-3 py-2 rounded-lg border border-border bg-surface text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="w-full sm:w-auto px-3 py-2 rounded-lg border border-border bg-surface text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
-        <div>
+        <div className="w-full sm:w-auto">
           <label
             htmlFor="iso-ack-to"
             className="block text-xs font-medium text-foreground-muted mb-1"
@@ -157,7 +157,7 @@ export function IsoAckLog() {
             type="date"
             value={to}
             onChange={(e) => onFilterChange({ to: e.target.value })}
-            className="px-3 py-2 rounded-lg border border-border bg-surface text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="w-full sm:w-auto px-3 py-2 rounded-lg border border-border bg-surface text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
         </div>
         <div className="flex items-center gap-1.5">

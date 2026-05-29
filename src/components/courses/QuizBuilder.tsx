@@ -389,7 +389,7 @@ export function QuizBuilder({
                 />
                 <div className="space-y-2">
                   {editOptions.map((opt, oidx) => (
-                    <div key={opt.id ?? `new-${oidx}`} className="flex items-center gap-2">
+                    <div key={opt.id ?? `new-${oidx}`} className="flex items-center gap-2 flex-wrap">
                       <input
                         type="radio"
                         name={`edit-correct-${question.id}`}
@@ -404,7 +404,7 @@ export function QuizBuilder({
                         onChange={(e) => handleEditOptionText(oidx, e.target.value)}
                         placeholder={`Option ${oidx + 1}`}
                         aria-label={`Option ${oidx + 1} text`}
-                        className="flex-1 rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="flex-1 min-w-0 rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       />
                       {editOptions.length > 2 && (
                         <button

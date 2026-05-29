@@ -170,7 +170,7 @@ export default async function PoliciesPage() {
                         href={`/policies/${doc.id}`}
                         className="block h-full rounded-lg border border-border bg-surface p-4 hover-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                       >
-                        <p className="text-sm font-medium text-foreground">
+                        <p className="line-clamp-2 text-sm font-medium text-foreground">
                           {doc.documentTitle}
                         </p>
                         <p className="mt-1 text-xs text-foreground-muted">

@@ -36,11 +36,11 @@ export function LessonNavigation({
   if (!prev && !next) return null;
 
   return (
-    <div className="mt-8 flex items-stretch gap-3 border-t border-border pt-6">
+    <div className="mt-8 flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-stretch">
       {prev ? (
         <Link
           href={`/courses/${courseId}/lessons/${prev.id}`}
-          className="group flex min-w-0 flex-1 items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 transition-all hover:border-border-strong hover:shadow-sm"
+          className="group flex w-full min-w-0 items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 transition-all hover:border-border-strong hover:shadow-sm sm:flex-1"
         >
           <ChevronLeftIcon className="h-4 w-4 flex-shrink-0 text-foreground-subtle transition-colors group-hover:text-primary" />
           <div className="min-w-0">
@@ -57,7 +57,7 @@ export function LessonNavigation({
       {next ? (
         <Link
           href={`/courses/${courseId}/lessons/${next.id}`}
-          className="group flex min-w-0 flex-1 items-center justify-end gap-3 rounded-lg border border-border bg-card px-4 py-3 text-right transition-all hover:border-border-strong hover:shadow-sm"
+          className="group flex w-full min-w-0 items-center justify-end gap-3 rounded-lg border border-border bg-card px-4 py-3 text-right transition-all hover:border-border-strong hover:shadow-sm sm:flex-1"
         >
           <div className="min-w-0">
             <p className="mb-0.5 text-xs text-foreground-subtle">Next</p>

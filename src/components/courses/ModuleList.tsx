@@ -87,7 +87,7 @@ export function ModuleList({
           </button>
 
           {expanded.has(mod.id) && mod.lessons.length > 0 && (
-            <div className="pl-10 pr-4 pb-2 space-y-0.5">
+            <div className="pl-6 sm:pl-10 pr-4 pb-2 space-y-0.5">
               {mod.lessons.map((lesson) => (
                 <Link
                   key={lesson.id}

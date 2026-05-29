@@ -122,8 +122,7 @@ function PdfViewer({ proxyUrl, fileName }: { proxyUrl: string; fileName: string 
 
   return (
     <div
-      className="overflow-hidden rounded-lg border border-border"
-      style={{ height: "calc(100vh - 16rem)" }}
+      className="overflow-hidden rounded-lg border border-border h-[clamp(320px,70vh,calc(100vh-16rem))]"
     >
       {!ready && !error && (
         <div className="flex h-full w-full items-center justify-center bg-surface-muted">
@@ -179,8 +178,8 @@ function stripLeadingTitle(content: string, title: string): string {
 function HtmlLessonViewer({ proxyUrl, fileName }: { proxyUrl: string; fileName: string }) {
   return (
     <div
-      className="overflow-hidden rounded-lg border border-border bg-black"
-      style={{ aspectRatio: "16 / 9", minHeight: "480px" }}
+      className="overflow-hidden rounded-lg border border-border bg-black min-h-[300px] sm:min-h-[480px]"
+      style={{ aspectRatio: "16 / 9" }}
     >
       <iframe
         src={proxyUrl}

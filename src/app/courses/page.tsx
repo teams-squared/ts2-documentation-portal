@@ -263,7 +263,7 @@ export default async function CourseCatalogPage({
               </Suspense>
 
               {isPrivileged && (
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-1 sm:gap-2">
                   <span className="text-xs text-foreground-muted">Status:</span>
                   {["all", "published", "draft", "archived"].map((s) => {
                     const isActive = s === "all" ? !statusFilter : statusFilter === s;
@@ -275,7 +275,7 @@ export default async function CourseCatalogPage({
                       <a
                         key={s}
                         href={href}
-                        className={`rounded-full border px-2.5 py-1 text-xs capitalize transition-colors ${
+                        className={`rounded-full border px-2 sm:px-2.5 py-1 text-xs capitalize transition-colors ${
                           isActive
                             ? "border-primary bg-primary-subtle text-primary-subtle-foreground"
                             : "border-border text-foreground-muted hover:border-border-strong"

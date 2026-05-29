@@ -73,7 +73,7 @@ export function WelcomeBar({ firstName, xp, streak }: WelcomeBarProps) {
               "radial-gradient(60% 90% at 0% 50%, oklch(0.42 0.28 285 / 0.08), transparent 70%)",
           }}
         />
-        <div className="relative flex items-center gap-4 sm:gap-5">
+        <div className="relative flex flex-col sm:flex-row items-center sm:items-center gap-2 sm:gap-5">
           <LevelAvatar level={level} />
 
           <div className="flex-1 min-w-0">
