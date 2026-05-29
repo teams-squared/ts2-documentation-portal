@@ -37,10 +37,14 @@ _None._ Working tree clean. No `wip/*` branch open.
 ## Pending external actions
 
 - [ ] **Curate first docs into `/policies` library.** Library exists + serves but `PublicIsoDoc` row count = 0. Sign in as ADMIN → `/admin/iso` → **Public library** tab → add via paste-link, browse SP picker, or **From lesson…**.
-- [ ] **Clean stale `_prisma_migrations` row.** `20260512000000_add_manual_reminder_log` stuck "failed" from 2026-05-11 (table actually exists). Cosmetic, hand-rolled `prisma/migrate.ts` ignores it. Fix:
+- [ ] **Clean 2 stale `_prisma_migrations` rows.** Both `rolled_back`, both cosmetic — underlying schema verified present, hand-rolled `prisma/migrate.ts` ignores them:
+  - `20260512000000_add_manual_reminder_log` (2026-05-11) — `ManualReminderLog` table exists.
+  - `20260527000000_add_iso_library_is_hidden` (2026-05-27) — `PublicIsoDoc.isHidden` column exists.
   ```sh
   DATABASE_URL="<prod url>" npx prisma migrate resolve --applied 20260512000000_add_manual_reminder_log
+  DATABASE_URL="<prod url>" npx prisma migrate resolve --applied 20260527000000_add_iso_library_is_hidden
   ```
+  Both cleared automatically by the open "switch `render.yaml` to `prisma migrate deploy`" item below.
 - [ ] **Triage Dependabot vulns.** Push of PR #40 reported `16 vulnerabilities (6 high, 9 moderate, 1 low)` on default branch. Check `https://github.com/teams-squared/ts2-lms/security/dependabot`.
 
 ## Open questions / decisions
