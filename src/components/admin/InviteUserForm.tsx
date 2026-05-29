@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { FormButton } from "@/components/ui/FormButton";
 import type { NodeWithChildren } from "@/lib/courseNodes";
 import type { Role } from "@/lib/types";
+import { DEFAULT_INVITE_DOMAIN, normalizeInviteEmail } from "@/lib/inviteEmail";
+import type { DirectoryLookup } from "@/lib/entra/graph";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -138,7 +140,7 @@ export function InviteUserForm({
     recipient: Recipient,
     resend: boolean,
   ): Promise<RecipientStatus> => {
-    const trimmedEmail = recipient.email.trim().toLowerCase();
+    const trimmedEmail = normalizeInviteEmail(recipient.email);
     if (!trimmedEmail || !EMAIL_RE.test(trimmedEmail)) {
       return { kind: "error", message: "Invalid email" };
     }
@@ -196,7 +198,7 @@ export function InviteUserForm({
       (r) => statuses[r.id]?.kind !== "sent",
     );
     const validPending = pending.filter((r) =>
-      EMAIL_RE.test(r.email.trim().toLowerCase()),
+      EMAIL_RE.test(normalizeInviteEmail(r.email)),
     );
     if (validPending.length === 0) {
       setError("Add at least one valid email address.");
@@ -213,7 +215,7 @@ export function InviteUserForm({
       for (const r of validPending) next[r.id] = { kind: "sending" };
       // Anything pending-but-invalid gets flagged inline.
       for (const r of pending) {
-        if (!EMAIL_RE.test(r.email.trim().toLowerCase())) {
+        if (!EMAIL_RE.test(normalizeInviteEmail(r.email))) {
           next[r.id] = { kind: "error", message: "Invalid email" };
         }
       }
@@ -255,7 +257,7 @@ export function InviteUserForm({
         // we don't need its id here — onSuccess just triggers a refetch.
         .map((r) => ({
           id: r.recipient.id,
-          email: r.recipient.email.trim().toLowerCase(),
+          email: normalizeInviteEmail(r.recipient.email),
           name: r.recipient.name.trim() || null,
           role,
         }));
@@ -272,7 +274,7 @@ export function InviteUserForm({
     const status = await submitOne(recipient, true);
     setStatuses((prev) => ({ ...prev, [recipient.id]: status }));
     if (status.kind === "sent") {
-      toast(`Re-sent invite to ${recipient.email.trim().toLowerCase()}`);
+      toast(`Re-sent invite to ${normalizeInviteEmail(recipient.email)}`);
       router.refresh();
     } else if (status.kind === "error") {
       toast(`Re-send failed: ${status.message}`, "error");
@@ -298,8 +300,13 @@ export function InviteUserForm({
         <div>
           <h3 className="text-sm font-semibold text-foreground">Invite users</h3>
           <p className="text-xs text-foreground-muted mt-0.5">
-            Add one or more recipients. Role and courses are applied to all of
-            them, making it easy to onboard a cohort.
+            Add one or more recipients. A username with no domain becomes{" "}
+            <code className="rounded bg-surface-muted px-1">
+              @{DEFAULT_INVITE_DOMAIN}
+            </code>{" "}
+            automatically; type a full address for any other domain. Role and
+            courses are applied to all recipients, making it easy to onboard a
+            cohort.
           </p>
         </div>
         <button
@@ -493,19 +500,62 @@ function RecipientRow({
   onResend,
 }: RecipientRowProps) {
   const isSent = status?.kind === "sent";
+
+  // Advisory Entra-directory check. `null` = nothing to show (idle, invalid,
+  // or Graph couldn't tell us). Never blocks the send.
+  const [directory, setDirectory] = useState<DirectoryLookup | "checking" | null>(
+    null,
+  );
+
+  const checkDirectory = async (email: string) => {
+    if (!EMAIL_RE.test(email)) {
+      setDirectory(null);
+      return;
+    }
+    setDirectory("checking");
+    try {
+      const res = await fetch(
+        `/api/admin/users/lookup?email=${encodeURIComponent(email)}`,
+      );
+      if (!res.ok) {
+        setDirectory(null);
+        return;
+      }
+      setDirectory((await res.json()) as DirectoryLookup);
+    } catch {
+      // Network error — stay silent, this is advisory only.
+      setDirectory(null);
+    }
+  };
+
   return (
     <div className="flex items-start gap-2">
       <div className="grid sm:grid-cols-[1fr_1fr] gap-2 flex-1">
-        <input
-          type="email"
-          value={recipient.email}
-          onChange={(e) => onChange({ email: e.target.value })}
-          placeholder={index === 0 ? "newhire@teamsquared.io" : "additional@teamsquared.io"}
-          aria-label={`Email for recipient ${index + 1}`}
-          className="px-3 py-2 rounded-lg border border-border bg-surface text-sm text-foreground placeholder-foreground-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all disabled:opacity-50"
-          disabled={disabled || isSent}
-          required={index === 0}
-        />
+        <div>
+          <input
+            type="email"
+            value={recipient.email}
+            onChange={(e) => {
+              onChange({ email: e.target.value });
+              // Editing invalidates any prior directory result.
+              setDirectory(null);
+            }}
+            // On blur: fill in the org domain for a bare username (`akil` ->
+            // `akil@teamsquared.io`; full addresses left alone), then run the
+            // advisory directory check against the resolved address.
+            onBlur={(e) => {
+              const resolved = normalizeInviteEmail(e.target.value);
+              if (resolved !== recipient.email) onChange({ email: resolved });
+              void checkDirectory(resolved);
+            }}
+            placeholder={index === 0 ? "newhire or newhire@teamsquared.io" : "name or name@teamsquared.io"}
+            aria-label={`Email for recipient ${index + 1}`}
+            className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-sm text-foreground placeholder-foreground-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all disabled:opacity-50"
+            disabled={disabled || isSent}
+            required={index === 0}
+          />
+          <DirectoryHint directory={directory} />
+        </div>
         <input
           type="text"
           value={recipient.name}
@@ -543,6 +593,40 @@ function RecipientRow({
         )}
       </div>
     </div>
+  );
+}
+
+/** Inline advisory note under the email field about Entra-directory presence.
+ *  Renders nothing when we can't tell (unconfigured / no permission / error) —
+ *  the directory check never blocks a send. */
+function DirectoryHint({
+  directory,
+}: {
+  directory: DirectoryLookup | "checking" | null;
+}) {
+  if (directory === null) return null;
+  if (directory === "checking")
+    return (
+      <p className="mt-1 text-xs text-foreground-subtle">Checking directory…</p>
+    );
+  if (directory.status === "unknown") return null;
+  if (directory.status === "not_found")
+    return (
+      <p className="mt-1 text-xs text-warning">
+        Not found in directory — you can still send.
+      </p>
+    );
+  // found
+  if (!directory.accountEnabled)
+    return (
+      <p className="mt-1 text-xs text-warning">
+        In directory, but the account is disabled.
+      </p>
+    );
+  return (
+    <p className="mt-1 text-xs text-success">
+      In directory{directory.displayName ? ` · ${directory.displayName}` : ""}.
+    </p>
   );
 }
 

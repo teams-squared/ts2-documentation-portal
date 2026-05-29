@@ -61,7 +61,8 @@ describe("POST /api/admin/users/invite", () => {
 
   it("returns 400 for invalid email", async () => {
     mockRequireRole.mockResolvedValue({ userId: "admin-1", role: "admin" });
-    const res = await POST(makeReq({ email: "not-an-email" }));
+    // Has an "@" so domain-autofill leaves it alone, and it's still malformed.
+    const res = await POST(makeReq({ email: "not@an@email" }));
     expect(res.status).toBe(400);
   });
 
@@ -321,6 +322,59 @@ describe("POST /api/admin/users/invite", () => {
     expect(mockTx.user.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ email: "hire@test.com" }),
+      }),
+    );
+  });
+
+  it("appends the org domain to a bare username (no @)", async () => {
+    mockRequireRole.mockResolvedValue({ userId: "admin-1", role: "admin" });
+    mockPrisma.user.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ name: "Admin", email: "a@t.com" });
+
+    const mockTx = makeMockTx();
+    mockTx.user.create.mockResolvedValue({
+      id: "new-1",
+      email: "akil@teamsquared.io",
+      name: null,
+      role: "EMPLOYEE",
+      createdAt: new Date(),
+    });
+    mockPrisma.$transaction.mockImplementation(
+      async (cb: (tx: typeof mockTx) => Promise<unknown>) => cb(mockTx),
+    );
+
+    const res = await POST(makeReq({ email: "Akil" }));
+    expect(res.status).toBe(201);
+    expect(mockTx.user.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ email: "akil@teamsquared.io" }),
+      }),
+    );
+  });
+
+  it("leaves a fully-qualified non-org address untouched", async () => {
+    mockRequireRole.mockResolvedValue({ userId: "admin-1", role: "admin" });
+    mockPrisma.user.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ name: "Admin", email: "a@t.com" });
+
+    const mockTx = makeMockTx();
+    mockTx.user.create.mockResolvedValue({
+      id: "new-1",
+      email: "akil@gmail.com",
+      name: null,
+      role: "EMPLOYEE",
+      createdAt: new Date(),
+    });
+    mockPrisma.$transaction.mockImplementation(
+      async (cb: (tx: typeof mockTx) => Promise<unknown>) => cb(mockTx),
+    );
+
+    await POST(makeReq({ email: "akil@gmail.com" }));
+    expect(mockTx.user.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ email: "akil@gmail.com" }),
       }),
     );
   });
