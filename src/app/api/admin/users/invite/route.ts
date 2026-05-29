@@ -5,6 +5,7 @@ import { appRoleToPrisma } from "@/lib/types";
 import type { Role } from "@/lib/types";
 import { createEnrollments } from "@/lib/enrollments";
 import { sendUserInviteEmail } from "@/lib/email";
+import { normalizeInviteEmail } from "@/lib/inviteEmail";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const VALID_ROLES: Role[] = ["admin", "course_manager", "employee"];
@@ -57,7 +58,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const email = body.email?.trim().toLowerCase() ?? "";
+  // Bare usernames (no "@") get the org domain appended, so `akil` becomes
+  // `akil@teamsquared.io` while `akil@gmail.com` passes through unchanged.
+  const email = normalizeInviteEmail(body.email ?? "");
   const name = body.name?.trim() || null;
   const role = body.role ?? "employee";
   const courseIds = Array.isArray(body.courseIds) ? body.courseIds : [];

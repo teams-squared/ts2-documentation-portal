@@ -78,6 +78,22 @@ describe("InviteUserForm — UI", () => {
     ).toBe("Alice");
   });
 
+  it("autofills the org domain on blur for a bare username", () => {
+    wrap(<InviteUserForm {...baseProps} />);
+    const input = screen.getByLabelText("Email for recipient 1") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "akil" } });
+    fireEvent.blur(input);
+    expect(input.value).toBe("akil@teamsquared.io");
+  });
+
+  it("leaves a full address untouched on blur", () => {
+    wrap(<InviteUserForm {...baseProps} />);
+    const input = screen.getByLabelText("Email for recipient 1") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "akil@gmail.com" } });
+    fireEvent.blur(input);
+    expect(input.value).toBe("akil@gmail.com");
+  });
+
   it("renders role picker options for an admin inviter", () => {
     wrap(<InviteUserForm {...baseProps} />);
     expect(screen.getByDisplayValue(/employee/i)).toBeInTheDocument();

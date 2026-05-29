@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { FormButton } from "@/components/ui/FormButton";
 import type { NodeWithChildren } from "@/lib/courseNodes";
 import type { Role } from "@/lib/types";
+import { DEFAULT_INVITE_DOMAIN, normalizeInviteEmail } from "@/lib/inviteEmail";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -138,7 +139,7 @@ export function InviteUserForm({
     recipient: Recipient,
     resend: boolean,
   ): Promise<RecipientStatus> => {
-    const trimmedEmail = recipient.email.trim().toLowerCase();
+    const trimmedEmail = normalizeInviteEmail(recipient.email);
     if (!trimmedEmail || !EMAIL_RE.test(trimmedEmail)) {
       return { kind: "error", message: "Invalid email" };
     }
@@ -196,7 +197,7 @@ export function InviteUserForm({
       (r) => statuses[r.id]?.kind !== "sent",
     );
     const validPending = pending.filter((r) =>
-      EMAIL_RE.test(r.email.trim().toLowerCase()),
+      EMAIL_RE.test(normalizeInviteEmail(r.email)),
     );
     if (validPending.length === 0) {
       setError("Add at least one valid email address.");
@@ -213,7 +214,7 @@ export function InviteUserForm({
       for (const r of validPending) next[r.id] = { kind: "sending" };
       // Anything pending-but-invalid gets flagged inline.
       for (const r of pending) {
-        if (!EMAIL_RE.test(r.email.trim().toLowerCase())) {
+        if (!EMAIL_RE.test(normalizeInviteEmail(r.email))) {
           next[r.id] = { kind: "error", message: "Invalid email" };
         }
       }
@@ -255,7 +256,7 @@ export function InviteUserForm({
         // we don't need its id here — onSuccess just triggers a refetch.
         .map((r) => ({
           id: r.recipient.id,
-          email: r.recipient.email.trim().toLowerCase(),
+          email: normalizeInviteEmail(r.recipient.email),
           name: r.recipient.name.trim() || null,
           role,
         }));
@@ -272,7 +273,7 @@ export function InviteUserForm({
     const status = await submitOne(recipient, true);
     setStatuses((prev) => ({ ...prev, [recipient.id]: status }));
     if (status.kind === "sent") {
-      toast(`Re-sent invite to ${recipient.email.trim().toLowerCase()}`);
+      toast(`Re-sent invite to ${normalizeInviteEmail(recipient.email)}`);
       router.refresh();
     } else if (status.kind === "error") {
       toast(`Re-send failed: ${status.message}`, "error");
@@ -298,8 +299,13 @@ export function InviteUserForm({
         <div>
           <h3 className="text-sm font-semibold text-foreground">Invite users</h3>
           <p className="text-xs text-foreground-muted mt-0.5">
-            Add one or more recipients. Role and courses are applied to all of
-            them, making it easy to onboard a cohort.
+            Add one or more recipients. A username with no domain becomes{" "}
+            <code className="rounded bg-surface-muted px-1">
+              @{DEFAULT_INVITE_DOMAIN}
+            </code>{" "}
+            automatically; type a full address for any other domain. Role and
+            courses are applied to all recipients, making it easy to onboard a
+            cohort.
           </p>
         </div>
         <button
@@ -500,7 +506,16 @@ function RecipientRow({
           type="email"
           value={recipient.email}
           onChange={(e) => onChange({ email: e.target.value })}
-          placeholder={index === 0 ? "newhire@teamsquared.io" : "additional@teamsquared.io"}
+          // Fill in the org domain on blur so a bare username (`akil`) becomes
+          // `akil@teamsquared.io` in place. Addresses with a domain are left
+          // alone. Skip when the field has no "@"-less content to complete.
+          onBlur={(e) => {
+            const raw = e.target.value.trim();
+            if (raw && !raw.includes("@")) {
+              onChange({ email: normalizeInviteEmail(raw) });
+            }
+          }}
+          placeholder={index === 0 ? "newhire or newhire@teamsquared.io" : "name or name@teamsquared.io"}
           aria-label={`Email for recipient ${index + 1}`}
           className="px-3 py-2 rounded-lg border border-border bg-surface text-sm text-foreground placeholder-foreground-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all disabled:opacity-50"
           disabled={disabled || isSent}
