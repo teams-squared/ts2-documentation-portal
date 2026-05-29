@@ -36,6 +36,7 @@ _None._ Working tree clean. No `wip/*` branch open.
 
 ## Pending external actions
 
+- [ ] **Grant `User.Read.All` (Application) to LMS app registration.** Invite form now does advisory Entra directory check (warn-not-block) on email blur via Graph app-only token. Dormant until consent lands — every lookup returns `unknown` (no badge) without it. Reuses existing `AZURE_AD_CLIENT_ID/_SECRET/_TENANT_ID`, no new env/redeploy. Steps: Entra admin center → App registrations → LMS app → API permissions → Add → Microsoft Graph → **Application** permissions → `User.Read.All` → **Grant admin consent** (row must show green check). Code: `src/lib/entra/graph.ts`, `src/app/api/admin/users/lookup/route.ts`.
 - [ ] **Curate first docs into `/policies` library.** Library exists + serves but `PublicIsoDoc` row count = 0. Sign in as ADMIN → `/admin/iso` → **Public library** tab → add via paste-link, browse SP picker, or **From lesson…**.
 - [ ] **Clean stale `_prisma_migrations` row.** `20260512000000_add_manual_reminder_log` stuck "failed" from 2026-05-11 (table actually exists). Cosmetic, hand-rolled `prisma/migrate.ts` ignores it. Fix:
   ```sh
