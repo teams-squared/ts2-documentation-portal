@@ -4,18 +4,11 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import {
-  Home,
-  GraduationCap,
-  Shield,
-  ShieldCheck,
-  BookOpenCheck,
-  PanelLeftClose,
-  PanelLeftOpen,
-} from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import Logo from "@/components/Logo";
+import { getVisibleNavItems, isNavItemActive } from "./navItems";
 
 /**
  * Sidebar — design-system Section 8.6 (primary navigation).
@@ -38,34 +31,6 @@ import Logo from "@/components/Logo";
  * (collapsed=false) are promoted to pinned=true so their preference is
  * preserved.
  */
-
-interface NavItem {
-  href: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  /** If true, require admin or course_manager role. */
-  manage?: boolean;
-}
-
-const BASE_NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/courses", label: "Courses", icon: GraduationCap },
-  { href: "/policies", label: "Policies", icon: ShieldCheck },
-];
-
-const ADMIN_NAV_ITEM: NavItem = {
-  href: "/admin",
-  label: "Admin",
-  icon: Shield,
-  manage: true,
-};
-
-const COURSE_MANAGER_NAV_ITEM: NavItem = {
-  href: "/admin",
-  label: "Course Management",
-  icon: BookOpenCheck,
-  manage: true,
-};
 
 interface SidebarProps {
   className?: string;
@@ -103,18 +68,7 @@ export function Sidebar({ className }: SidebarProps) {
     }
   }, [pinned, mounted]);
 
-  const role = session?.user?.role;
-  const isAdmin = role === "admin";
-  const isCourseManager = role === "course_manager";
-
-  const visibleItems: NavItem[] = [
-    ...BASE_NAV_ITEMS,
-    ...(isAdmin
-      ? [ADMIN_NAV_ITEM]
-      : isCourseManager
-        ? [COURSE_MANAGER_NAV_ITEM]
-        : []),
-  ];
+  const visibleItems = getVisibleNavItems(session?.user?.role);
 
   // When `collapsible` is true (unpinned mode), labels and brand text are
   // hidden at the 64px rail and fade in only when the parent `aside.group`
@@ -157,8 +111,7 @@ export function Sidebar({ className }: SidebarProps) {
       <nav className="flex-1 overflow-y-auto px-2 py-3">
         <ul className="flex flex-col gap-0.5">
           {visibleItems.map(({ href, label, icon: Icon }) => {
-            const active =
-              pathname === href || (href !== "/" && pathname.startsWith(href));
+            const active = isNavItemActive(pathname ?? "", href);
             return (
               <li key={href}>
                 <Link
@@ -217,10 +170,11 @@ export function Sidebar({ className }: SidebarProps) {
       <aside
         aria-label="Primary"
         className={cn(
+          // Hidden on mobile — MobileNav (hamburger drawer) takes over below md.
           // z-40 keeps the app shell sidebar above any in-page overlay
           // sidebars (e.g. the course sidebar at z-30 inside lesson pages),
           // so its expansion doesn't get occluded by them.
-          "sticky top-0 z-40 flex h-screen w-[264px] shrink-0 flex-col overflow-hidden border-r border-border bg-surface",
+          "sticky top-0 z-40 hidden h-screen w-[264px] shrink-0 flex-col overflow-hidden border-r border-border bg-surface md:flex",
           className,
         )}
       >
@@ -233,16 +187,18 @@ export function Sidebar({ className }: SidebarProps) {
   return (
     <>
       {/* Spacer reserves the 64px rail in the flex flow so main content
-         starts 64px from the left, regardless of overlay state. */}
-      <div aria-hidden="true" className="w-16 shrink-0" />
+         starts 64px from the left, regardless of overlay state. Hidden on
+         mobile — the rail is replaced by the MobileNav hamburger drawer. */}
+      <div aria-hidden="true" className="hidden w-16 shrink-0 md:block" />
       <aside
         aria-label="Primary"
         className={cn(
+          // Hidden on mobile — MobileNav drawer replaces the rail below md.
           // z-40 — see pinned variant above. Must be higher than any
           // in-page overlay sidebar (course sidebar uses z-30) so the
           // app sidebar's hover-expand cleanly covers them rather than
           // getting clipped behind them.
-          "group fixed left-0 top-0 z-40 flex h-screen w-16 flex-col overflow-hidden border-r border-border bg-surface",
+          "group fixed left-0 top-0 z-40 hidden h-screen w-16 flex-col overflow-hidden border-r border-border bg-surface md:flex",
           "transition-[width,box-shadow] duration-200 ease-out",
           "hover:w-[264px] hover:shadow-lg",
           "focus-within:w-[264px] focus-within:shadow-lg",

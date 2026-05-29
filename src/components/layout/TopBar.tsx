@@ -9,6 +9,7 @@ import { Search, LogOut } from "lucide-react";
 import { useSignOut } from "@/hooks/useSignOut";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { MobileNav } from "@/components/layout/MobileNav";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { UserAvatar } from "@/components/ui/UserAvatar";
 import {
@@ -60,6 +61,9 @@ export function TopBar({ className, compact = false, slim = false }: TopBarProps
         className,
       )}
     >
+      {/* Mobile nav trigger — hidden from md up (desktop uses the sidebar). */}
+      <MobileNav />
+
       {/* Search — centered flex grow; suppressed in slim mode */}
       {slim ? (
         <div className="flex-1" aria-hidden="true" />
