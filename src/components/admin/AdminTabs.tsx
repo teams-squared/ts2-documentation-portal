@@ -24,7 +24,7 @@ export function AdminTabs() {
   const visibleTabs = TABS.filter((t) => isAdmin || !t.adminOnly);
 
   return (
-    <nav className="flex gap-1 mb-6 border-b border-border overflow-x-auto">
+    <nav className="flex gap-1 mb-6 border-b border-border overflow-x-auto overflow-y-hidden">
       {visibleTabs.map((tab) => {
         const isActive = tab.exact
           ? pathname === tab.href
