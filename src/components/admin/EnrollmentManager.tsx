@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/ToastProvider";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CourseNodeTree } from "@/components/admin/CourseNodeTree";
+import { ADMIN_LIST_SCROLL, ADMIN_LIST_THEAD } from "@/components/admin/listScroll";
 import type { NodeWithChildren } from "@/lib/courseNodes";
 
 interface Course {
@@ -185,8 +186,10 @@ export function EnrollmentManager({
             No enrollments yet.
           </p>
         ) : (
+          // Scroll the list internally so the page itself stays put.
+          <div className={ADMIN_LIST_SCROLL}>
           <table className="w-full text-sm">
-            <thead>
+            <thead className={ADMIN_LIST_THEAD}>
               <tr className="bg-surface-muted text-left">
                 <th className="px-5 py-3 font-medium text-foreground-muted">
                   User
@@ -240,6 +243,7 @@ export function EnrollmentManager({
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

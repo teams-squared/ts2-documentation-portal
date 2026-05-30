@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { useMutationPulse } from "@/hooks/useMutationPulse";
 import { useListMorph } from "@/hooks/useListMorph";
 import { cn } from "@/lib/utils";
+import { ADMIN_LIST_SCROLL } from "@/components/admin/listScroll";
 import type { CourseStatus } from "@/lib/types";
 
 interface Course {
@@ -349,7 +350,10 @@ export default function AdminCourseTable({ nodeTree = [] }: { nodeTree?: NodeTre
           </div>
         )
       ) : (
-        <div className="space-y-4">
+        // Scroll the grouped list internally so the page itself stays put and
+        // the count + pagination remain visible. Group header bars scroll with
+        // their rows (they double as section labels), so no sticky thead here.
+        <div className={`${ADMIN_LIST_SCROLL} space-y-4`}>
           {paginatedGroups.map((group) => {
             const isCollapsed = collapsedGroups.has(group.key);
             return (
