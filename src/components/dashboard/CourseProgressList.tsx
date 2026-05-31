@@ -23,6 +23,8 @@ interface CourseItem {
   percentComplete: number;
   continueUrl: string;
   isComplete?: boolean;
+  /** Lesson the learner resumes from. Omitted for completed courses. */
+  nextLessonTitle?: string;
 }
 
 interface CourseProgressListProps {
@@ -160,6 +162,12 @@ function ScrollableRow({ courses }: { courses: CourseItem[] }) {
                   {course.completedLessons} of {course.totalLessons} lesson
                   {course.totalLessons !== 1 ? "s" : ""}
                 </p>
+                {!course.isComplete && course.nextLessonTitle ? (
+                  <p className="mt-1 truncate text-xs text-foreground-subtle">
+                    <span className="text-foreground-muted">Continue:</span>{" "}
+                    {course.nextLessonTitle}
+                  </p>
+                ) : null}
               </div>
             </Link>
           );
@@ -211,12 +219,12 @@ export function CourseProgressList({
         <div className="rounded-lg border border-dashed border-border p-8 text-center">
           <GraduationCapIcon className="mx-auto mb-3 h-8 w-8 text-foreground-subtle" />
           <p className="mb-1 text-sm font-medium text-foreground">
-            No courses have been assigned to you yet
+            No courses yet
           </p>
           <p className="mb-4 text-xs text-foreground-muted">
             {userRole === "admin"
-              ? "Browse the catalog to find courses."
-              : "Contact your administrator to get enrolled in courses."}
+              ? "Browse the catalog to enroll yourself, or assign courses to your team from the admin panel."
+              : "Courses assigned to you will show up here. Reach out to your administrator to get started."}
           </p>
           {userRole === "admin" && (
             <Button asChild size="default">

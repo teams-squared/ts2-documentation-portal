@@ -96,11 +96,18 @@ describe("DeadlineAlerts", () => {
     relativeText: "due in 2 weeks",
   };
 
-  it("renders nothing when there are no urgent items", () => {
-    const { container } = render(
-      <DeadlineAlerts deadlines={[upcoming]} />,
-    );
+  it("renders nothing when there are no deadlines at all", () => {
+    const { container } = render(<DeadlineAlerts deadlines={[]} />);
     expect(container.textContent).toBe("");
+  });
+
+  it("shows an on-track confirmation when only upcoming (non-urgent) items exist", () => {
+    render(<DeadlineAlerts deadlines={[upcoming]} />);
+    expect(screen.getByText(/on track/i)).toBeInTheDocument();
+    // Upcoming item is tucked behind the expander.
+    expect(screen.queryByText("Later")).toBeNull();
+    fireEvent.click(screen.getByText("1 upcoming"));
+    expect(screen.getByText("Later")).toBeInTheDocument();
   });
 
   it("renders overdue items with danger styling", () => {
@@ -153,11 +160,9 @@ describe("CourseProgressList", () => {
         userRole="employee"
       />,
     );
+    expect(screen.getByText(/No courses yet/)).toBeInTheDocument();
     expect(
-      screen.getByText(/No courses have been assigned to you yet/),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Contact your administrator/),
+      screen.getByText(/Reach out to your administrator/),
     ).toBeInTheDocument();
     // Non-admin sees no "Browse the catalog" button.
     expect(screen.queryByText("Browse the catalog")).toBeNull();
@@ -220,6 +225,27 @@ describe("CourseProgressList", () => {
     );
     expect(screen.getByText("Completed")).toBeInTheDocument();
     expect(screen.getByText("Almost")).toBeInTheDocument();
+  });
+
+  it("shows the next lesson on in-progress cards but not completed ones", () => {
+    render(
+      <CourseProgressList
+        courses={[
+          c({ courseId: "c-1", courseTitle: "Active", nextLessonTitle: "OAuth Basics" }),
+          c({
+            courseId: "c-2",
+            courseTitle: "Finished",
+            isComplete: true,
+            nextLessonTitle: "Should Not Show",
+          }),
+        ]}
+        completedCount={1}
+        hasEnrollments={true}
+        userRole="employee"
+      />,
+    );
+    expect(screen.getByText("OAuth Basics")).toBeInTheDocument();
+    expect(screen.queryByText("Should Not Show")).toBeNull();
   });
 
   it("pluralizes lesson(s) correctly", () => {

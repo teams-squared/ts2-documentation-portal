@@ -7,7 +7,7 @@ vi.mock("@/lib/achievements", () => ({
   checkAndAwardAchievements: vi.fn().mockResolvedValue([]),
 }));
 
-import { awardXp } from "@/lib/xp";
+import { awardXp, effectiveStreak } from "@/lib/xp";
 import { checkAndAwardAchievements } from "@/lib/achievements";
 const mockCheckAndAwardAchievements = vi.mocked(checkAndAwardAchievements);
 
@@ -156,5 +156,43 @@ describe("awardXp", () => {
     expect(created.getMinutes()).toBe(0);
     expect(created.getSeconds()).toBe(0);
     expect(created.getMilliseconds()).toBe(0);
+  });
+});
+
+describe("effectiveStreak", () => {
+  const now = new Date("2026-05-31T10:00:00");
+
+  function daysAgo(n: number) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - n);
+    return d;
+  }
+
+  it("returns 0 when there is no activity date", () => {
+    expect(effectiveStreak(4, null, now)).toBe(0);
+    expect(effectiveStreak(4, undefined, now)).toBe(0);
+  });
+
+  it("returns 0 for a non-positive stored streak", () => {
+    expect(effectiveStreak(0, daysAgo(0), now)).toBe(0);
+  });
+
+  it("keeps the streak when last activity was today", () => {
+    expect(effectiveStreak(4, daysAgo(0), now)).toBe(4);
+  });
+
+  it("keeps the streak when last activity was yesterday (still in reach)", () => {
+    expect(effectiveStreak(4, daysAgo(1), now)).toBe(4);
+  });
+
+  it("breaks the streak when last activity was 2+ days ago", () => {
+    expect(effectiveStreak(4, daysAgo(2), now)).toBe(0);
+    expect(effectiveStreak(4, daysAgo(30), now)).toBe(0);
+  });
+
+  it("ignores time-of-day, comparing calendar days only", () => {
+    // last activity late yesterday, now early today → still alive
+    const lateYesterday = new Date("2026-05-30T23:30:00");
+    expect(effectiveStreak(7, lateYesterday, now)).toBe(7);
   });
 });

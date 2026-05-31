@@ -1,5 +1,6 @@
 import { calculateLevel } from "@/lib/levels";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
+import { WelcomeGreeting } from "@/components/dashboard/WelcomeGreeting";
 
 interface WelcomeBarProps {
   firstName: string;
@@ -7,6 +8,12 @@ interface WelcomeBarProps {
   streak: number;
 }
 
+/**
+ * Server-side fallback greeting for SSR / first paint. The viewer's real
+ * local-time greeting is computed client-side in WelcomeGreeting; this runs in
+ * the server's UTC clock, so treat it only as a placeholder that gets corrected
+ * on mount.
+ */
 function getTimeBasedGreeting(): string {
   const hour = new Date().getHours();
   if (hour < 5)  return "Burning the midnight oil";
@@ -15,7 +22,7 @@ function getTimeBasedGreeting(): string {
   return "Good evening";
 }
 
-/** Rotate between motivational sublines. Stable within the hour. */
+/** Server-side fallback subline. See getTimeBasedGreeting note on local time. */
 function getSubline(firstName: string): string {
   const options = [
     `Keep it up, ${firstName}!`,
@@ -77,25 +84,11 @@ export function WelcomeBar({ firstName, xp, streak }: WelcomeBarProps) {
           <LevelAvatar level={level} />
 
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium uppercase tracking-wider text-foreground-muted">
-              {greeting}
-            </p>
-            <h1 className="font-display text-xl sm:text-2xl font-bold tracking-tight truncate">
-              {/* Personality signature (§9.13) — gradient-clipped welcome
-                  wordmark drifts over --duration-ambient-drift. Anchored to
-                  the hero, paired with the surface-breathe overlay above so
-                  the two ambient signals share one breathing place. */}
-              <span
-                className="motion-safe:animate-gradient-drift bg-clip-text text-transparent"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(90deg, oklch(0.42 0.28 285) 0%, oklch(0.55 0.24 295) 50%, oklch(0.42 0.28 285) 100%)",
-                  backgroundSize: "200% 100%",
-                }}
-              >
-                {subline}
-              </span>
-            </h1>
+            <WelcomeGreeting
+              firstName={firstName}
+              initialGreeting={greeting}
+              initialSubline={subline}
+            />
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-foreground-muted">
               <span className="inline-flex items-center gap-1.5">
                 <AnimatedNumber value={currentXp} className="font-semibold text-foreground" />
