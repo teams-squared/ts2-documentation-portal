@@ -5,6 +5,7 @@ import Logo from "@/components/Logo";
 import { computeDeadline, getDeadlineStatus, formatDeadlineRelative } from "@/lib/deadlines";
 import type { DeadlineStatus } from "@/lib/deadlines";
 import type { Role } from "@/lib/types";
+import { effectiveStreak } from "@/lib/xp";
 import { WelcomeBar } from "@/components/dashboard/WelcomeBar";
 import { NextStepBanner } from "@/components/dashboard/NextStepBanner";
 import { DeadlineAlerts } from "@/components/dashboard/DeadlineAlerts";
@@ -196,7 +197,7 @@ export default async function HomePage() {
       <WelcomeBar
         firstName={firstName}
         xp={userStats?.xp ?? 0}
-        streak={userStats?.streak ?? 0}
+        streak={effectiveStreak(userStats?.streak ?? 0, userStats?.lastActivityDate)}
       />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4 space-y-6">

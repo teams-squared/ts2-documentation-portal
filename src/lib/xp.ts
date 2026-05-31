@@ -39,5 +39,34 @@ export async function awardXp(userId: string, amount: number) {
   return { stats, newAchievements };
 }
 
+/**
+ * The displayable streak as of `now`.
+ *
+ * `UserStats.streak` is a stored counter that is only ever written by
+ * `awardXp()` when a learner completes a lesson or quiz. Nothing decays it, so
+ * a learner who earned a 4-day streak and then went quiet keeps reading "4-day
+ * streak" forever. A streak is only alive if the last activity was today or
+ * yesterday; otherwise the chain is broken and the effective streak is 0.
+ *
+ * Day boundaries use the same local-midnight convention as `awardXp()` so the
+ * read path and write path agree.
+ */
+export function effectiveStreak(
+  streak: number,
+  lastActivityDate: Date | null | undefined,
+  now: Date = new Date(),
+): number {
+  if (!lastActivityDate || streak <= 0) return 0;
+
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const last = new Date(lastActivityDate);
+  last.setHours(0, 0, 0, 0);
+
+  const diffDays = Math.floor((today.getTime() - last.getTime()) / (1000 * 60 * 60 * 24));
+  // 0 = active today, 1 = active yesterday (today still in reach) → alive.
+  return diffDays <= 1 ? streak : 0;
+}
+
 // Re-export for server-side callers
 export { calculateLevel } from "./levels";
